@@ -225,6 +225,17 @@ Return ONLY the fixed compressed file. No explanation.
 """
 
 
+def is_protected_markdown_line(line: str) -> bool:
+    stripped = line.lstrip()
+    return (
+        not line.strip()
+        or line.startswith(("#", "```", "~~~", "    ", "\t", "<"))
+        or stripped.startswith((">", "|", "- [", "* [", "+ ["))
+        or re.match(r"\d+[.)]\s", stripped) is not None
+        or ("|" in line and re.match(r"^\s*\|?.*\|.*\|", line) is not None)
+    )
+
+
 def changed_prose_blocks(base: str, current: str) -> list[tuple[int, int, str]]:
     """Return changed paragraph blocks from current without exposing unchanged text.
 
@@ -241,14 +252,14 @@ def changed_prose_blocks(base: str, current: str) -> list[tuple[int, int, str]]:
     for _, _, _, start, end in matcher.get_opcodes():
         if start == end:
             continue
-        # Expand through adjoining prose, but never into a heading/fence.
-        while start > 0 and current_lines[start - 1].strip() and not current_lines[start - 1].startswith(("#", "```", "~~~")):
+        # Expand through adjoining normal prose only; keep tables, quotes,
+        # tasks, lists, HTML, headings and code outside the model boundary.
+        while start > 0 and not is_protected_markdown_line(current_lines[start - 1]):
             start -= 1
-        while end < len(current_lines) and current_lines[end].strip() and not current_lines[end].startswith(("#", "```", "~~~")):
+        while end < len(current_lines) and not is_protected_markdown_line(current_lines[end]):
             end += 1
         block = "".join(current_lines[start:end])
-        if (block.strip() and
-                not any(line.startswith(("#", "```", "~~~")) for line in current_lines[start:end])):
+        if block.strip() and all(not is_protected_markdown_line(line) for line in current_lines[start:end]):
             candidate = (offsets[start], offsets[end], block)
             if candidate not in blocks:
                 blocks.append(candidate)
@@ -257,6 +268,18 @@ def changed_prose_blocks(base: str, current: str) -> list[tuple[int, int, str]]:
 
 def compress_incremental(filepath: Path, base_path: Path, dry_run: bool = False) -> bool:
     """Compress only changed prose relative to an explicit local baseline."""
+    filepath = filepath.resolve()
+    base_path = base_path.resolve()
+    max_file_size = 500_000
+    if not filepath.exists() or not base_path.exists():
+        raise FileNotFoundError("Incremental compression requires existing current and baseline files")
+    if filepath.stat().st_size > max_file_size or base_path.stat().st_size > max_file_size:
+        raise ValueError(f"File too large to compress safely (max 500KB): {filepath}")
+    if is_sensitive_path(filepath) or is_sensitive_path(base_path):
+        raise ValueError("Refusing incremental compression of sensitive path; compression sends prose to the API")
+    if not should_compress(filepath):
+        print("Skipping (not natural language)")
+        return False
     current = filepath.read_text(errors="ignore")
     base = base_path.read_text(errors="ignore")
     blocks = changed_prose_blocks(base, current)
@@ -272,15 +295,19 @@ def compress_incremental(filepath: Path, base_path: Path, dry_run: bool = False)
         if not compressed or not compressed.strip() or compressed.strip() == block.strip():
             raise RuntimeError("Incremental compression returned empty or unchanged block")
         updated = updated[:start] + compressed + updated[end:]
-    original_path = filepath.with_suffix(filepath.suffix + ".hui-incremental.original")
-    if original_path.exists():
-        raise RuntimeError(f"Refusing to overwrite existing backup: {original_path}")
-    original_path.write_text(current)
+    backup_path = backup_dir_for(filepath) / (filepath.stem + ".incremental.original.md")
+    backup_path.parent.mkdir(parents=True, exist_ok=True)
+    if backup_path.exists():
+        raise RuntimeError(f"Refusing to overwrite existing backup: {backup_path}")
+    backup_path.write_text(current)
+    if backup_path.read_text(errors="ignore") != current:
+        backup_path.unlink(missing_ok=True)
+        raise RuntimeError(f"Incremental backup verification failed: {backup_path}")
     filepath.write_text(updated)
-    result = validate(original_path, filepath)
+    result = validate(backup_path, filepath)
     if not result.is_valid:
         filepath.write_text(current)
-        original_path.unlink(missing_ok=True)
+        backup_path.unlink(missing_ok=True)
         raise RuntimeError("Incremental validation failed: " + "; ".join(result.errors))
     return True
 
