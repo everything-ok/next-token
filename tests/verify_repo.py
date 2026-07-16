@@ -1,0 +1,424 @@
+#!/usr/bin/env python3
+"""Local verification runner for hui install surfaces."""
+
+from __future__ import annotations
+
+import json
+import os
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class CheckFailure(RuntimeError):
+    pass
+
+
+def section(title: str) -> None:
+    print(f"\n== {title} ==")
+
+
+def ensure(condition: bool, message: str) -> None:
+    if not condition:
+        raise CheckFailure(message)
+
+
+def run(
+    args: list[str],
+    *,
+    cwd: Path = ROOT,
+    env: dict[str, str] | None = None,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    merged_env = os.environ.copy()
+    # Keep Python subprocess output decodable on Windows when the CLI prints Unicode.
+    merged_env.setdefault("PYTHONIOENCODING", "utf-8")
+    if env:
+        merged_env.update(env)
+    result = subprocess.run(
+        args,
+        cwd=cwd,
+        env=merged_env,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        capture_output=True,
+        check=False,
+    )
+    if check and result.returncode != 0:
+        raise CheckFailure(
+            f"Command failed ({result.returncode}): {' '.join(args)}\n"
+            f"stdout:\n{result.stdout}\n"
+            f"stderr:\n{result.stderr}"
+        )
+    return result
+
+
+def read_json(path: Path) -> object:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def shell_path(path: Path) -> str:
+    return str(path).replace("\\", "/") if os.name == "nt" else str(path)
+
+
+def _frontmatter_description(path: Path) -> str:
+    lines = path.read_text(encoding="utf-8").splitlines()
+    ensure(lines and lines[0] == "---", f"{path} missing YAML frontmatter")
+
+    description_lines: list[str] = []
+    collecting = False
+    block_indent: int | None = None
+    for line in lines[1:]:
+        if line == "---":
+            break
+        if collecting:
+            stripped = line.strip()
+            if not stripped:
+                description_lines.append("")
+                continue
+            indent = len(line) - len(line.lstrip(" \t"))
+            if block_indent is None:
+                if indent == 0:
+                    break
+                block_indent = indent
+            elif indent < block_indent:
+                break
+            description_lines.append(stripped)
+            continue
+        if line.startswith("description:"):
+            value = line.split(":", 1)[1].strip()
+            # Folded (>) and literal (|) block scalars, with optional chomping (-/+).
+            if value and value[0] in ("|", ">"):
+                collecting = True
+                continue
+            return value.strip("'\"")
+    return " ".join(part for part in description_lines if part)
+
+
+def verify_skill_frontmatter_upload_compatibility() -> None:
+    section("Skill Frontmatter Upload Compatibility")
+
+    skill_paths = [
+        ROOT / "skills/hui/SKILL.md",
+        ROOT / "skills/hui-commit/SKILL.md",
+        ROOT / "skills/hui-help/SKILL.md",
+        ROOT / "skills/hui-review/SKILL.md",
+        ROOT / "skills/hui-compress/SKILL.md",
+    ]
+    for path in skill_paths:
+        description = _frontmatter_description(path)
+        ensure(
+            "<" not in description and ">" not in description,
+            f"{path} description contains XML-like angle brackets",
+        )
+
+    print("Skill frontmatter descriptions avoid XML-like tags")
+
+
+def verify_synced_files() -> None:
+    section("Synced Files")
+    skill_source = ROOT / "skills/hui/SKILL.md"
+
+    skill_copies = [
+        ROOT / "plugins/hui/skills/hui/SKILL.md",
+    ]
+    for copy in skill_copies:
+        ensure(
+            copy.read_text(encoding="utf-8") == skill_source.read_text(encoding="utf-8"),
+            f"Skill copy mismatch: {copy}",
+        )
+
+    with zipfile.ZipFile(ROOT / "dist" / "hui.skill") as archive:
+        ensure("hui/SKILL.md" in archive.namelist(), "hui.skill missing hui/SKILL.md")
+        ensure(
+            archive.read("hui/SKILL.md")
+            == skill_source.read_bytes(),
+            "hui.skill payload mismatch",
+        )
+
+    ensure(
+        (ROOT / "bin" / "install.js").exists(),
+        "bin/install.js missing — package.json bin entry would break npx hui",
+    )
+    ensure(
+        (ROOT / "bin" / "lib" / "settings.js").exists(),
+        "bin/lib/settings.js missing — installer would crash on JSONC settings.json",
+    )
+
+    print("Synced copies, hui.skill zip, and installer entrypoints OK")
+
+
+def verify_manifests_and_syntax() -> None:
+    section("Manifests And Syntax")
+
+    manifest_paths = [
+        ROOT / ".claude-plugin/plugin.json",
+        ROOT / ".claude-plugin/marketplace.json",
+        ROOT / ".codex/hooks.json",
+        ROOT / "gemini-extension.json",
+        ROOT / "plugins/hui/.codex-plugin/plugin.json",
+    ]
+    for path in manifest_paths:
+        read_json(path)
+
+    run(["node", "--check", "src/hooks/hui-config.js"])
+    run(["node", "--check", "src/hooks/hui-activate.js"])
+    run(["node", "--check", "src/hooks/hui-mode-tracker.js"])
+    run(["node", "--check", "src/hooks/huicrew-model-overrides.js"])
+    run(["node", "--check", "bin/install.js"])
+    run(["node", "--check", "bin/lib/settings.js"])
+    if os.name != "nt":
+        run(["bash", "-n", "src/hooks/install.sh"])
+        run(["bash", "-n", "src/hooks/uninstall.sh"])
+        run(["bash", "-n", "src/hooks/hui-statusline.sh"])
+    else:
+        print("Skipping bash syntax checks on Windows (Git Bash/WSL bridge unavailable)")
+
+    # Ensure install/uninstall scripts include hui-config.js
+    install_sh = (ROOT / "src/hooks/install.sh").read_text(encoding="utf-8")
+    uninstall_sh = (ROOT / "src/hooks/uninstall.sh").read_text(encoding="utf-8")
+    ensure("hui-config.js" in install_sh, "install.sh missing hui-config.js")
+    ensure("hui-config.js" in uninstall_sh, "uninstall.sh missing hui-config.js")
+
+    print("JSON manifests and JS/bash syntax OK")
+
+
+def verify_powershell_static() -> None:
+    section("PowerShell Static Checks")
+    install_text = (ROOT / "src/hooks/install.ps1").read_text(encoding="utf-8")
+    uninstall_text = (ROOT / "src/hooks/uninstall.ps1").read_text(encoding="utf-8")
+    statusline_text = (ROOT / "src/hooks/hui-statusline.ps1").read_text(encoding="utf-8")
+
+    ensure("hui-config.js" in install_text, "install.ps1 missing hui-config.js")
+    ensure("hui-config.js" in uninstall_text, "uninstall.ps1 missing hui-config.js")
+    ensure("hui-statusline.ps1" in install_text, "install.ps1 missing statusline.ps1")
+    ensure("hui-statusline.ps1" in uninstall_text, "uninstall.ps1 missing statusline.ps1")
+    ensure("-AsHashtable" not in install_text, "install.ps1 should stay compatible with Windows PowerShell 5.1")
+    ensure(
+        "powershell -ExecutionPolicy Bypass -File" in install_text,
+        "install.ps1 missing PowerShell statusline command",
+    )
+    ensure("[HUI" in statusline_text, "hui-statusline.ps1 missing badge output")
+
+    print("Windows install path statically wired")
+
+
+def load_compress_modules():
+    sys.path.insert(0, str(ROOT / "skills/hui-compress"))
+    import scripts.benchmark  # noqa: F401
+    import scripts.cli as cli
+    import scripts.compress  # noqa: F401
+    import scripts.detect as detect
+    import scripts.validate as validate
+
+    return cli, detect, validate
+
+
+def verify_compress_fixtures() -> None:
+    section("Compress Fixtures")
+    _, detect, validate = load_compress_modules()
+
+    fixtures = sorted((ROOT / "tests/hui-compress").glob("*.original.md"))
+    ensure(fixtures, "No hui-compress fixtures found")
+
+    for original in fixtures:
+        compressed = original.with_name(original.name.replace(".original.md", ".md"))
+        ensure(compressed.exists(), f"Missing compressed fixture for {original.name}")
+        result = validate.validate(original, compressed)
+        ensure(result.is_valid, f"Fixture validation failed for {compressed.name}: {result.errors}")
+        ensure(detect.should_compress(compressed), f"Fixture should be compressible: {compressed.name}")
+
+    print(f"Validated {len(fixtures)} hui-compress fixture pairs")
+
+
+def verify_compress_cli() -> None:
+    section("Compress CLI")
+
+    skip_result = run(
+        [sys.executable, "-m", "scripts", "../../src/hooks/install.sh"],
+        cwd=ROOT / "skills/hui-compress",
+        check=False,
+    )
+    ensure(skip_result.returncode == 0, "compress CLI skip path should exit 0")
+    ensure("Detected: code" in skip_result.stdout, "compress CLI skip path missing detection output")
+    ensure(
+        "Skipping: file is not natural language" in skip_result.stdout,
+        "compress CLI skip path missing skip output",
+    )
+
+    missing_result = run(
+        [sys.executable, "-m", "scripts", "../../does-not-exist.md"],
+        cwd=ROOT / "skills/hui-compress",
+        check=False,
+    )
+    ensure(missing_result.returncode == 1, "compress CLI missing-file path should exit 1")
+    ensure("File not found" in missing_result.stdout, "compress CLI missing-file output mismatch")
+
+    print("Compress CLI skip/error paths OK")
+
+
+def verify_hook_install_flow() -> None:
+    section("Claude Hook Flow")
+
+    ensure(shutil.which("node") is not None, "node is required for hook verification")
+    ensure(shutil.which("bash") is not None, "bash is required for hook verification")
+
+    with tempfile.TemporaryDirectory(prefix="hui-verify-") as temp_root:
+        temp_root_path = Path(temp_root)
+        home = temp_root_path / "home"
+        claude_dir = home / ".claude"
+        claude_dir.mkdir(parents=True)
+
+        existing_settings = {
+            "statusLine": {"type": "command", "command": "bash /tmp/existing-statusline.sh"},
+            "hooks": {"Notification": [{"hooks": [{"type": "command", "command": "echo keep-me"}]}]},
+        }
+        (claude_dir / "settings.json").write_text(json.dumps(existing_settings, indent=2) + "\n")
+        hook_env = {"HOME": shell_path(home), "CLAUDE_CONFIG_DIR": shell_path(claude_dir)}
+
+        run(["bash", "src/hooks/install.sh"], env=hook_env)
+
+        settings = read_json(claude_dir / "settings.json")
+        hooks = settings["hooks"]
+        ensure(settings["statusLine"]["command"] == "bash /tmp/existing-statusline.sh", "install.sh clobbered existing statusLine")
+        ensure("SessionStart" in hooks, "SessionStart hook missing after install")
+        ensure("UserPromptSubmit" in hooks, "UserPromptSubmit hook missing after install")
+
+        activate = run(
+            ["node", "src/hooks/hui-activate.js"],
+            env=hook_env,
+        )
+        ensure("HUI MODE ACTIVE" in activate.stdout, "activation output missing hui banner")
+        ensure("STATUSLINE SETUP NEEDED" not in activate.stdout, "activation should stay quiet when custom statusline exists")
+        ensure((claude_dir / ".hui-active").read_text(encoding="utf-8") == "full", "activation flag should default to full")
+
+        # Test configurable default mode via HUI_DEFAULT_MODE env var
+        activate_custom = run(
+            ["node", "src/hooks/hui-activate.js"],
+            env={**hook_env, "HUI_DEFAULT_MODE": "ultra"},
+        )
+        ensure("HUI MODE ACTIVE" in activate_custom.stdout, "activation with custom default missing banner")
+        ensure(
+            (claude_dir / ".hui-active").read_text(encoding="utf-8") == "ultra",
+            "HUI_DEFAULT_MODE=ultra should set flag to ultra",
+        )
+        # Test "off" mode — activation skipped, flag removed
+        activate_off = run(
+            ["node", "src/hooks/hui-activate.js"],
+            env={**hook_env, "HUI_DEFAULT_MODE": "off"},
+        )
+        ensure("HUI MODE ACTIVE" not in activate_off.stdout, "off mode should not emit hui banner")
+        ensure(not (claude_dir / ".hui-active").exists(), "off mode should remove flag file")
+
+        # Test mode tracker with /hui when default is off — should NOT write flag
+        subprocess.run(
+            ["node", "src/hooks/hui-mode-tracker.js"],
+            cwd=ROOT,
+            env={**os.environ, **hook_env, "HUI_DEFAULT_MODE": "off"},
+            text=True,
+            encoding="utf-8",
+            input='{"prompt":"/hui"}',
+            capture_output=True,
+            check=True,
+        )
+        ensure(not (claude_dir / ".hui-active").exists(), "/hui with off default should not write flag")
+
+        # Reset back to full for subsequent tests
+        (claude_dir / ".hui-active").write_text("full")
+
+        run(
+            ["node", "src/hooks/hui-mode-tracker.js"],
+            env=hook_env,
+            check=True,
+        )
+
+        ultra_prompt = subprocess.run(
+            ["node", "src/hooks/hui-mode-tracker.js"],
+            cwd=ROOT,
+            env={**os.environ, **hook_env},
+            text=True,
+            encoding="utf-8",
+            input='{"prompt":"/hui ultra"}',
+            capture_output=True,
+            check=True,
+        )
+        ensure(
+            "HUI MODE ACTIVE (ultra)" in ultra_prompt.stdout,
+            "mode tracker should emit active-mode reinforcement",
+        )
+        ensure((claude_dir / ".hui-active").read_text(encoding="utf-8") == "ultra", "mode tracker did not record ultra")
+
+        subprocess.run(
+            ["node", "src/hooks/hui-mode-tracker.js"],
+            cwd=ROOT,
+            env={**os.environ, **hook_env},
+            text=True,
+            encoding="utf-8",
+            input='{"prompt":"normal mode"}',
+            capture_output=True,
+            check=True,
+        )
+        ensure(not (claude_dir / ".hui-active").exists(), "normal mode should remove flag file")
+
+        (claude_dir / ".hui-active").write_text("wenyan-ultra")
+        statusline = run(
+            ["bash", "src/hooks/hui-statusline.sh"],
+            env=hook_env,
+        )
+        ensure("[HUI:WENYAN-ULTRA]" in statusline.stdout, "statusline badge output mismatch")
+
+        reinstall = run(["bash", "src/hooks/install.sh"], env=hook_env)
+        ensure("Nothing to do" in reinstall.stdout, "install.sh should be idempotent")
+
+        run(["bash", "src/hooks/uninstall.sh"], env=hook_env)
+        settings_after = read_json(claude_dir / "settings.json")
+        ensure(settings_after == existing_settings, "uninstall.sh did not restore non-hui settings")
+        ensure(not (claude_dir / ".hui-active").exists(), "uninstall.sh should remove flag file")
+
+    with tempfile.TemporaryDirectory(prefix="hui-verify-fresh-") as temp_root:
+        home = Path(temp_root) / "home"
+        claude_dir = home / ".claude"
+        hook_env = {"HOME": shell_path(home), "CLAUDE_CONFIG_DIR": shell_path(claude_dir)}
+        run(["bash", "src/hooks/install.sh"], env=hook_env)
+        settings = read_json(claude_dir / "settings.json")
+        ensure("statusLine" in settings, "fresh install should configure statusline")
+        activate = run(["node", "src/hooks/hui-activate.js"], env=hook_env)
+        ensure("STATUSLINE SETUP NEEDED" not in activate.stdout, "fresh install should not nudge for statusline")
+        run(["bash", "src/hooks/uninstall.sh"], env=hook_env)
+        ensure(read_json(claude_dir / "settings.json") == {}, "fresh uninstall should leave empty settings")
+
+    print("Claude hook install/uninstall flow OK")
+
+
+def main() -> int:
+    checks = [
+        verify_skill_frontmatter_upload_compatibility,
+        verify_synced_files,
+        verify_manifests_and_syntax,
+        verify_powershell_static,
+        verify_compress_fixtures,
+        verify_compress_cli,
+    ]
+    if os.name != "nt":
+        checks.append(verify_hook_install_flow)
+
+    try:
+        for check in checks:
+            check()
+    except CheckFailure as exc:
+        print(f"\nFAIL: {exc}", file=sys.stderr)
+        return 1
+
+    print("\nAll local verification checks passed")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,225 @@
+{
+  "source": "results.json",
+  "arms": {
+    "hui": {
+      "pass_rate": 0.9,
+      "checks": [
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "fail",
+          "missing_literals": [],
+          "self_reference": true
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        }
+      ]
+    },
+    "hui-cn": {
+      "pass_rate": 1.0,
+      "checks": [
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        }
+      ]
+    },
+    "hui-es": {
+      "pass_rate": 1.0,
+      "checks": [
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        }
+      ]
+    },
+    "compress": {
+      "pass_rate": 1.0,
+      "checks": [
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        },
+        {
+          "verdict": "pass",
+          "missing_literals": [],
+          "self_reference": false
+        }
+      ]
+    }
+  }
+}

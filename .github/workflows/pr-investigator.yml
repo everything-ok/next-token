@@ -1,0 +1,31 @@
+name: PR investigator
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'bin/**'
+      - 'src/**'
+      - 'agents/**'
+      - 'skills/**'
+      - 'evals/**'
+      - 'benchmarks/**'
+      - 'commands/**'
+      - 'scripts/**'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  investigate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Report changed surface
+        shell: bash
+        run: |
+          files=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
+          python .github/scripts/pr_investigator.py $files >> "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,15 @@
+benchmarks/results/*.json
+__pycache__/
+*.pyc
+**/__pycache__/
+.venv/
+.env.local
+**/.DS_Store
+.claude/worktrees/
+evals/snapshots/*.html
+evals/snapshots/*.png
+context/refs/research-brief-hui-code-efficiency.md
+
+# Build artifacts
+dist/*
+!dist/hui.skill

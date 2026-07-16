@@ -1,0 +1,57 @@
+name: Verify release artifacts
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verify local release contract
+        run: |
+          npm run check-assets
+          npm run test:package
+          HUI_REF="${{ github.ref_name }}" node bin/install.js --help
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          hooks = Path('src/hooks')
+          manifest = dict(
+              line.split(maxsplit=1)
+              for line in (hooks / 'checksums.sha256').read_text().splitlines()
+              if line.strip()
+          )
+          for name, digest in manifest.items():
+              actual = hashlib.sha256((hooks / name).read_bytes()).hexdigest()
+              if actual != digest:
+                  raise SystemExit(f'checksum mismatch: {name}')
+          print('Tagged checkout checksum manifest verified')
+          PY
+      - name: Verify remote hooks match tag manifest
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          base="https://raw.githubusercontent.com/2454760302hui/next-token/${REF}/src/hooks"
+          curl --fail-with-body --retry 3 --retry-all-errors -sSLO "${base}/checksums.sha256"
+          while read -r digest name; do
+            curl --fail-with-body --retry 3 --retry-all-errors -sS "${base}/${name}" | sha256sum -c - <<<"${digest}  -"
+          done < checksums.sha256
+      - name: Verify bootstrap contracts
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          base="https://raw.githubusercontent.com/2454760302hui/next-token/${REF}"
+          curl --fail-with-body --retry 3 --retry-all-errors -sS "${base}/install.sh" | grep -F 'next-token'
+          curl --fail-with-body --retry 3 --retry-all-errors -sS "${base}/install.ps1" | grep -F 'next-token'

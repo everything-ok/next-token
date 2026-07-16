@@ -1,0 +1,39 @@
+{
+  "name": "hui",
+  "version": "0.1.0",
+  "description": "Ultra-compressed communication mode. Cut filler. Keep technical accuracy.",
+  "author": {
+    "name": "HUI Contributors",
+    "url": "https://github.com/2454760302hui"
+  },
+  "homepage": "https://github.com/2454760302hui/next-token",
+  "repository": "https://github.com/2454760302hui/next-token",
+  "license": "MIT",
+  "keywords": [
+    "productivity",
+    "communication",
+    "brevity",
+    "writing"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Hui",
+    "shortDescription": "Talk like hui. Cut filler. Keep technical accuracy.",
+    "longDescription": "Ultra-compressed communication mode for Codex. Use fewer words. Keep exact technical substance.",
+    "developerName": "HUI Contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Write"
+    ],
+    "websiteURL": "https://github.com/2454760302hui/next-token",
+    "privacyPolicyURL": "https://github.com/2454760302hui/next-token/blob/main/README.md",
+    "termsOfServiceURL": "https://github.com/2454760302hui/next-token/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Use hui mode. Cut filler. Keep technical accuracy."
+    ],
+    "composerIcon": "./assets/hui-small.svg",
+    "logo": "./assets/hui.svg",
+    "screenshots": [],
+    "brandColor": "#6B7280"
+  }
+}

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Hui"
+  short_description: "Talk like hui. Cut filler. Keep technical accuracy."
+  icon_small: "./assets/hui-small.svg"
+  icon_large: "./assets/hui.svg"
+  default_prompt: "Use $hui to answer briefly, cut filler, and preserve exact technical substance."

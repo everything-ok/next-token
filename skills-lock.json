@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "hui": {
+      "source": "2454760302hui/next-token",
+      "sourceType": "github",
+      "skillPath": "skills/hui/SKILL.md",
+      "computedHash": "315e41c13711162abe11a95f88649b2d177187e200cd4d544a540c9e64b09d1f"
+    },
+    "hui-commit": {
+      "source": "2454760302hui/next-token",
+      "sourceType": "github",
+      "skillPath": "skills/hui-commit/SKILL.md",
+      "computedHash": "08548f0cd55001002d5f72c7932ac75c6f9c9e0ea36ed0dad715505e8d0a76a5"
+    },
+    "hui-compress": {
+      "source": "2454760302hui/next-token",
+      "sourceType": "github",
+      "skillPath": "skills/hui-compress/SKILL.md",
+      "computedHash": "3d2ecfd4fa45c11c4dea237fe96921305181d1c61d51e3586e7e4cb6952211fa"
+    },
+    "hui-help": {
+      "source": "2454760302hui/next-token",
+      "sourceType": "github",
+      "skillPath": "skills/hui-help/SKILL.md",
+      "computedHash": "09a327ba0ea0e05a501619fb3b0de7d541d9dfdee23ae84797c9a272fb3a233b"
+    },
+    "hui-review": {
+      "source": "2454760302hui/next-token",
+      "sourceType": "github",
+      "skillPath": "skills/hui-review/SKILL.md",
+      "computedHash": "56933ccbec1e6875267c12af57cddfc5ef7c27466a327af84ebb8c89526fd3ef"
+    },
+    "hui-stats": {
+      "source": "2454760302hui/next-token",
+      "sourceType": "github",
+      "skillPath": "skills/hui-stats/SKILL.md",
+      "computedHash": "8cdb6756b38fc1c194aaef7136ad8fba07bf1b532fdc341479c4c225c1cccba8"
+    },
+    "huicrew": {
+      "source": "2454760302hui/next-token",
+      "sourceType": "github",
+      "skillPath": "skills/huicrew/SKILL.md",
+      "computedHash": "a34ae5e344323379c1c7d5c3693d580471334c43aaa00499c3fe7f8c1d49577d"
+    }
+  }
+}

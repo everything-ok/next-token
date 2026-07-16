@@ -1,0 +1,50 @@
+{
+  "name": "next-token",
+  "version": "0.1.0",
+  "description": "HUI installer — published on npm as next-token; installs HUI for AI coding agents.",
+  "license": "MIT",
+  "author": "HUI Contributors",
+  "homepage": "https://github.com/2454760302hui/next-token",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/2454760302hui/next-token.git"
+  },
+  "bugs": {
+    "url": "https://github.com/2454760302hui/next-token/issues"
+  },
+  "bin": {
+    "next-token": "./bin/install.js",
+    "hui": "./bin/install.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "hui",
+    "next-token",
+    "ai-coding-agent",
+    "claude-code",
+    "installer"
+  ],
+  "scripts": {
+    "test": "npm run test:node && npm run test:python && npm run test:package",
+    "test:node": "node --test tests/installer/*.test.mjs && node tests/test_mcp_shrink.js && node tests/test_mode_tracker_stdin.js && node tests/test_symlink_flag.js && node tests/test_hui_init.js && node tests/test_hui_stats.js && node tests/test_repo_local_config.js && node tests/test_huicrew_model_overrides.js",
+    "test:python": "python -m unittest discover -s tests -p \"test_compress_safety.py\" && python -m unittest discover -s tests -p \"test_detect.py\" && python -m unittest discover -s tests -p \"test_validate_inline.py\" && python -m unittest discover -s tests -p \"test_mode_tracker.py\" && python -m unittest discover -s tests -p \"test_incremental_compress.py\"",
+    "test:package": "python scripts/package_smoke.py",
+    "release:preflight": "python scripts/release_preflight.py",
+    "test:installer": "node --test tests/installer/*.test.mjs",
+    "sync-assets": "python scripts/sync_assets.py",
+    "check-assets": "python scripts/sync_assets.py --check"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "agents/",
+    "skills/",
+    "plugins/",
+    "commands/",
+    "dist/hui.skill",
+    "README.md",
+    "LICENSE"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "hui",
+  "description": "Ultra-compressed communication mode. Cuts 65% of output tokens (measured) while keeping full technical accuracy by speaking like a hui.",
+  "author": {
+    "name": "HUI Contributors",
+    "url": "https://github.com/2454760302hui"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hooks/hui-activate.js\"",
+            "timeout": 5,
+            "statusMessage": "Loading hui mode..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hooks/hui-mode-tracker.js\"",
+            "timeout": 5,
+            "statusMessage": "Tracking hui mode..."
+          }
+        ]
+      }
+    ]
+  }
+}

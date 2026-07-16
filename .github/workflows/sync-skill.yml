@@ -1,0 +1,62 @@
+name: Sync SKILL.md and rules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - skills/**
+      - agents/huicrew-*.md
+      - scripts/sync_assets.py
+  pull_request:
+    paths:
+      - skills/**
+      - agents/huicrew-*.md
+      - scripts/sync_assets.py
+
+concurrency:
+  group: sync-skill
+  cancel-in-progress: false
+
+jobs:
+  verify-generated-assets:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check generated mirrors
+        run: python scripts/sync_assets.py --check
+
+  sync:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Pull latest before making changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
+
+      - name: Sync generated mirrors
+        run: python scripts/sync_assets.py
+
+      - name: Commit and push if changed
+        run: |
+          git add \
+            skills/hui-compress/ \
+            plugins/hui/ \
+            .agents/skills/ \
+            .augment/skills/ \
+            .iflow/skills/ \
+            .kiro/skills/ \
+            dist/hui.skill
+          git diff --staged --quiet && exit 0
+          git commit -m "chore: sync SKILL.md copies [skip ci]"
+          git push
