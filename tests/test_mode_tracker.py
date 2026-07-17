@@ -35,18 +35,23 @@ class ModeTrackerTests(unittest.TestCase):
     def tearDown(self):
         self._tmp.cleanup()
 
-    def send(self, prompt):
+    def send(self, prompt, transcript_path=None):
         env = os.environ.copy()
         env.pop("HUI_DEFAULT_MODE", None)
         env["HOME"] = self._tmp.name
         env["USERPROFILE"] = self._tmp.name
         env["CLAUDE_CONFIG_DIR"] = str(self.claude_dir)
+        payload = {"prompt": prompt}
+        if transcript_path:
+            payload["transcript_path"] = str(transcript_path)
         return subprocess.run(
             ["node", str(TRACKER)],
             cwd=REPO_ROOT,
             env=env,
-            input=json.dumps({"prompt": prompt}),
+            input=json.dumps(payload),
             text=True,
+            encoding="utf-8",
+            errors="replace",
             capture_output=True,
             check=True,
         )
@@ -55,6 +60,11 @@ class ModeTrackerTests(unittest.TestCase):
         return self.flag.read_text() if self.flag.exists() else None
 
     # ── #598: deactivation word orders ──────────────────────────────────
+
+    def test_stop_hui_alias_deactivates(self):
+        self.flag.write_text("full")
+        self.send("stop-hui")
+        self.assertIsNone(self.flag_value())
 
     def test_turn_hui_mode_off_deactivates(self):
         # Pre-fix: this ACTIVATED hui and downgraded ultra -> full.
@@ -142,6 +152,35 @@ class ModeTrackerTests(unittest.TestCase):
         self.flag.write_text("full")
         self.send("/hui off")
         self.assertIsNone(self.flag_value())
+
+    def test_hyphenated_mode_commands(self):
+        for command, mode in [
+            ("/hui-global", "full"),
+            ("/hui-lite", "lite"),
+            ("/hui-ultra", "ultra"),
+            ("/hui-wenyan", "wenyan"),
+            ("/hui-wenyan-lite", "wenyan-lite"),
+            ("/hui-wenyan-full", "wenyan"),
+            ("/hui-wenyan-ultra", "wenyan-ultra"),
+            ("/hui:hui-global", "full"),
+            ("/hui:hui-lite", "lite"),
+            ("/hui:hui-ultra", "ultra"),
+            ("/hui:hui-wenyan", "wenyan"),
+            ("/hui:hui-wenyan-lite", "wenyan-lite"),
+            ("/hui:hui-wenyan-full", "wenyan"),
+            ("/hui:hui-wenyan-ultra", "wenyan-ultra"),
+        ]:
+            self.send(command)
+            self.assertEqual(self.flag_value(), mode, command)
+
+    def test_session_compact_does_not_change_global_mode(self):
+        transcript = Path(self._tmp.name) / "session.jsonl"
+        transcript.write_text(json.dumps({"message": {"role": "user", "content": "hello"}}) + "   \n", encoding="utf-8")
+        self.send("/hui-global")
+        result = self.send("/hui-session --compact", transcript)
+        self.assertEqual(self.flag_value(), "full")
+        self.assertIn("历史会话压缩副本", result.stdout)
+        self.assertTrue((Path(self._tmp.name) / "session.hui-compact.jsonl").exists())
 
     # ── #599: one-shot independent modes ────────────────────────────────
 

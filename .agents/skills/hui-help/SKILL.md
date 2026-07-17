@@ -8,28 +8,43 @@ description: >
 
 # Hui Help
 
-Display this reference card when invoked. One-shot — do NOT change mode, write flag files, or persist anything. Output in hui style.
+Display this reference card when invoked. One-shot — do not change mode, write flag files, or persist anything. Output in hui style.
 
 ## Modes
 
 | Mode | Trigger | What change |
 |------|---------|-------------|
-| **Lite** | `/hui lite` | Drop filler. Keep sentence structure. |
+| **Lite** | `/hui-lite` | Drop filler. Keep sentence structure. |
 | **Full** | `/hui` | Drop articles, filler, pleasantries, hedging. Fragments OK. Default. |
-| **Ultra** | `/hui ultra` | Extreme compression. Bare fragments. Tables over prose. |
-| **Wenyan-Lite** | `/hui wenyan-lite` | Classical Chinese style, light compression. |
-| **Wenyan-Full** | `/hui wenyan` | Full 文言文. Maximum classical terseness. |
-| **Wenyan-Ultra** | `/hui wenyan-ultra` | Extreme. Ancient scholar on a budget. |
+| **Ultra** | `/hui-ultra` | Terse fragments when meaning stays clear. |
+| **Wenyan-Full** | `/hui-wenyan` | Full 文言文 style. |
 
-Mode stick until changed or session end.
+Legacy form remains supported: `/hui lite|full|ultra|wenyan`.
+
+Mode sticks until changed or session end.
+
+## Commands
+
+| Command | Behavior |
+|---|---|
+| `/hui` / `/hui-global` | Persistent full HUI writing style for future replies. Does not rewrite transcript, context, or cache. |
+| `/hui-lite` / `/hui-ultra` | Persistent lite or ultra writing style. |
+| `/hui-wenyan[-lite\|-full\|-ultra]` | Persistent Wenyan writing style. |
+| `/hui demo` | **本地文本示例**. Fixed local before/after text; no model call or state writes. Claude Code only. |
+| `/hui-commit` / `/hui-review` | One-shot commit or review behavior. |
+| `/hui-compress <file>` | Rewrites an explicit natural-language file; creates backup and validates structure. |
+| `/hui-stats` | Reads observed local session usage. No savings or cost estimate. |
+| `/hui-session` | Read-only current-transcript summary; `--compact` creates validated sibling copy, never modifies original. Claude Code only. |
+| `/hui-init` | Writes project rule files; use dry-run first. |
+| `/hui-help` | This display; no state writes. |
 
 ## Skills
 
-| Skill | Trigger | What it do |
-|-------|---------|-----------|
+| Skill | Trigger | What it does |
+|-------|---------|--------------|
 | **hui-commit** | `/hui-commit` | Terse commit messages. Conventional Commits. ≤50 char subject. |
 | **hui-review** | `/hui-review` | One-line PR comments: `L42: bug: user null. Add guard.` |
-| **hui-compress** | `/hui-compress <file>` | Compress .md files to hui prose. Saves ~46% input tokens. |
+| **hui-compress** | `/hui-compress <file>` | Rewrites supported natural-language files while preserving validated structure. |
 | **hui-help** | `/hui-help` | This card. |
 
 ## Deactivate
@@ -38,7 +53,7 @@ Say "stop hui" or "normal mode". Resume anytime with `/hui`.
 
 ## Language
 
-Keep user's language by default. User write Portuguese → reply Portuguese hui. Compress the style, not the language. Technical terms, code, commands, commit types, and exact error strings stay verbatim unless user ask for translation.
+Keep user's language by default. Compress style, not language. Technical terms, code, commands, commit types, and exact error strings stay verbatim unless user asks for translation.
 
 ## Configure Default Mode
 
@@ -64,4 +79,4 @@ Resolution: env var > config file > `full`.
 
 ## More
 
-Full docs: https://github.com/2454760302hui/next-token
+Full docs: https://github.com/HUI/next-token

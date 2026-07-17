@@ -5,15 +5,17 @@ Show the hui quick-reference card.
 
 | Command | What |
 |---|---|
-| `/hui` | Activate at default level (full) |
-| `/hui lite` | Light compression — ~30% tokens dropped |
-| `/hui ultra` | Maximum compression |
-| `/hui wenyan[-lite\|-ultra]` | Classical Chinese compression |
+| `/hui` / `/hui-global` | Persistent full compression |
+| `/hui-lite` / `/hui-ultra` | Persistent lite or ultra compression |
+| `/hui-wenyan[-lite\|-full\|-ultra]` | Persistent classical Chinese compression |
 | `/hui off` | Deactivate |
-| `/hui-commit` | Terse commit message |
+| `/hui-commit` | One-shot terse commit message |
 | `/hui-review` | One-line review findings |
-| `/hui-compress <file>` | Compress a Markdown file |
-| `/hui-stats` | Lifetime token-savings |
+| `/hui-compress <file>` | Compress an explicit Markdown file; creates backup |
+| `/hui-stats` | Observed local session usage when host integration provides it |
+| `/hui-session` | Local read-only current-session summary |
+| `/hui-init` | Write project rules; use dry-run first |
+| `/hui-help` | This reference |
 
 Natural language also works: "turn on hui", "stop hui", "normal mode".
 

@@ -1,30 +1,41 @@
 # hui-stats
 
-Real session token receipts. No AI estimation.
+Observed local Claude Code session usage.
 
 ## What it does
 
-Reads the current Claude Code session log directly and reports actual input/output token usage plus estimated savings versus a non-hui baseline. Numbers come from the JSONL session log on disk — the model itself does not compute or estimate them. Output is injected by the `hui-mode-tracker` hook, which intercepts `/hui-stats` and returns the formatted stats as a blocked-decision reason.
+Reads current Claude Code session log and reports values recorded there:
 
-Each run also writes a lifetime-savings suffix file used by the statusline badge (`⛏ 12.4k`).
+- reply turns
+- output tokens
+- cache-read input tokens
+
+Output comes from `hui-mode-tracker` hook, which intercepts `/hui-stats` and returns local formatted data. Model does not compute numbers.
+
+`/hui-stats` does not estimate token savings, cost, latency, accuracy, or a non-HUI baseline. Each run stores observed totals locally for `/hui-stats --all` and `/hui-stats --since 7d`.
 
 ## How to invoke
 
 ```
 /hui-stats
+/hui-stats --all
+/hui-stats --since 7d
 ```
 
 ## Example output
 
 ```
-Session: 47 turns
-Input:   12,304 tokens
-Output:   3,891 tokens (hui)
-Baseline: 11,247 tokens (estimated without hui)
-Saved:    7,356 tokens (~65%)
+本地会话用量
+──────────────────────────────────
+回复轮次：  47
+──────────────────────────────────
+输出 token：        3,891
+缓存读取 token：    12,304
+──────────────────────────────────
+仅显示 Claude Code 本地会话日志中的观察值；不推算节省、成本或基线。
 ```
 
 ## See also
 
 - [`SKILL.md`](./SKILL.md) — hook contract and mechanics
-- [Hui README](../../README.md) — repo overview
+- [HUI README](../../README.md) — repository overview

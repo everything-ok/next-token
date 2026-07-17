@@ -1,6 +1,6 @@
 {
   "name": "hui",
-  "description": "Ultra-compressed communication mode. Cuts 65% of output tokens (measured) while keeping full technical accuracy by speaking like a hui.",
+  "description": "Concise communication mode that preserves technical terms, code, and safety guidance.",
   "version": "1.0.1",
   "contextFileName": "GEMINI.md"
 }

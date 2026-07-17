@@ -3,10 +3,10 @@
   "version": "0.1.1",
   "description": "MCP proxy that compresses prose fields (tool descriptions, etc.) using hui rules. Same accuracy, fewer context tokens.",
   "license": "MIT",
-  "homepage": "https://github.com/2454760302hui/next-token",
+  "homepage": "https://github.com/HUI/next-token",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/2454760302hui/next-token.git",
+    "url": "git+https://github.com/HUI/next-token.git",
     "directory": "src/mcp-servers/hui-shrink"
   },
   "author": "HUI Contributors",

@@ -1,61 +1,57 @@
 # huicrew
 
-Decision guide. When to delegate to hui subagents instead of doing the work inline.
+Decision guide for concise subagent roles.
 
 ## What it does
 
-Tells the main thread when to spawn a hui-style subagent versus the vanilla equivalent. The win: subagent tool-results inject back into main context verbatim, and hui output is roughly 1/3 the size of vanilla prose. Across 20 delegations in one session, that is the difference between context exhaustion and finishing the task.
+Huicrew defines three narrow roles for code location, small edits, and review findings. Each requests terse structured output so the main thread can quickly consume file locations, edit receipts, or ranked findings.
 
-Three subagents:
+Huicrew does not measure or guarantee token, context, cost, latency, or quality outcomes. Host-specific agent names and tool contracts depend on the installed integration.
 
 | Subagent | Job | Use when |
-|----------|-----|----------|
-| `huicrew-investigator` | Locate code (read-only) | "Where is X defined / what calls Y / list uses of Z" |
-| `huicrew-builder` | Surgical edit, 1-2 files | Scope is obvious, ≤2 files. Refuses 3+ file scope. |
-| `huicrew-reviewer` | Diff/file review | One-line findings with severity emoji |
-
-Use vanilla `Explore` or `Code Reviewer` when you want prose, architecture commentary, or rationale. Use main thread directly for one-line answers and 3+ file refactors.
-
-This skill is a decision guide, not a slash command. It activates when the conversation mentions delegation.
+|---|---|---|
+| `huicrew-investigator` | Locate code, read-only | Definitions, callers, references, directory maps |
+| `huicrew-builder` | Surgical edit, 1–2 files | Scope is obvious and bounded |
+| `huicrew-reviewer` | Diff/file review | Need concise severity-ranked findings |
 
 ## How to invoke
 
-Triggers on phrases like "delegate to subagent", "use huicrew", "spawn investigator", "save context", "compressed agent output".
+Use phrases such as:
 
-## Example chaining
+```text
+use huicrew
+spawn investigator
+find all uses of X
+review this diff
+```
 
-Locate → fix → verify (most common):
+## Typical flow
 
-1. `huicrew-investigator` returns site list (`path:line — symbol — note`)
-2. Main thread picks 1-2 sites, hands paths to `huicrew-builder`
-3. `huicrew-reviewer` audits the resulting diff
+1. Investigator locates candidate sites.
+2. Builder edits one or two selected files.
+3. Reviewer checks resulting diff.
 
-Parallel scout: spawn 2-3 `huicrew-investigator` calls in one message with different angles (defs, callers, tests). Aggregate in main.
+Use a host exploration or code-review workflow when detailed rationale, broad architecture work, or more than two files are required.
 
 ## Model overrides
 
-By default, `huicrew-reviewer` and `huicrew-investigator` pin `model: haiku` in their frontmatter; `huicrew-builder` has no `model:` line (uses the API session default). Set env vars in your shell before launching Claude Code to override per-agent:
+Plugin installs can override per-agent frontmatter models before launching Claude Code:
 
-| Env var | Agent |
+| Environment variable | Agent |
 |---|---|
 | `HUICREW_REVIEWER_MODEL` | `huicrew-reviewer` |
 | `HUICREW_BUILDER_MODEL` | `huicrew-builder` |
 | `HUICREW_INVESTIGATOR_MODEL` | `huicrew-investigator` |
 
-Example — run reviewer on sonnet, keep others on default:
-
 ```sh
 export HUICREW_REVIEWER_MODEL=sonnet
 ```
 
-Use the same model name strings you'd use in any Claude Code agent frontmatter (e.g. `haiku`, `sonnet`, `opus`).
-
-Overrides patch only the `model:` line in the installed agent's frontmatter; the prompt body is untouched and keeps receiving upstream updates. Plugin installs only — standalone hook installs have no local agent files to patch. Unset or blank = no change. The patch persists in the installed file until the plugin is updated or reinstalled.
+Overrides alter only the installed agent's `model:` line. Unset or blank values make no change.
 
 ## See also
 
-- [`SKILL.md`](./SKILL.md) — full decision matrix and output contracts
+- [`SKILL.md`](./SKILL.md) — full decision guide and output contracts
 - [`agents/huicrew-investigator.md`](../../agents/huicrew-investigator.md)
 - [`agents/huicrew-builder.md`](../../agents/huicrew-builder.md)
 - [`agents/huicrew-reviewer.md`](../../agents/huicrew-reviewer.md)
-- [Hui README](../../README.md) — repo overview

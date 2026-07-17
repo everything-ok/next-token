@@ -1,8 +1,5 @@
 ---
-description: Show hui lifetime token-savings stats
+description: Observed local session usage when host integration provides it
 ---
-Show hui stats — total tokens saved, sessions, average compression ratio.
 
-Read the lifetime history log at `~/.config/hui/.hui-history.jsonl`
-(or wherever the hui-stats script writes it). Output: total saved,
-sessions counted, avg ratio. One short table.
+Show locally observed session output-token, cache-read-token, and turn counts. Do not estimate savings, cost, or a baseline. If host does not expose local session logs, state that this utility is unavailable.

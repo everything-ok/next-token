@@ -1,7 +1,7 @@
 # Contributing to hui
 
 Thanks for considering a contribution. Hui is a multi-agent skill that
-makes 30+ AI coding agents talk in compressed hui-style prose. Most
+helps supported AI coding agents use concise technical prose. Most
 contributions fall into one of three buckets:
 
 1. **Editing skill prose** — change how hui speaks, what intensity levels do, what slash commands trigger.
@@ -57,13 +57,12 @@ on every push to `main`.
 
 | Path | Rebuilt from |
 |------|--------------|
-| `plugins/hui/skills/hui/SKILL.md` | `skills/hui/SKILL.md` |
-| `plugins/hui/skills/hui-compress/{SKILL.md, scripts/}` | `skills/hui-compress/{SKILL.md, scripts/}` |
-| `plugins/hui/skills/huicrew/SKILL.md` | `skills/huicrew/SKILL.md` |
+| `plugins/hui/skills/<skill>/` | Corresponding canonical `skills/<skill>/` directory |
 | `plugins/hui/agents/huicrew-*.md` | `agents/huicrew-*.md` |
-| `dist/hui.skill` | ZIP of `skills/hui/` (gitignored; rebuilt by CI on each push to `main`) |
+| `.agents/`, `.augment/`, `.iflow/`, `.kiro/`, `.qwen/` skill mirrors | Corresponding canonical `skills/<skill>/` directory |
+| `dist/hui.skill` | Deterministic ZIP of `skills/hui/` |
 
-`hui-commit`, `hui-review`, `hui-help`, and `hui-stats` are **not** mirrored under `plugins/hui/skills/` by CI. Claude Code reaches them through the standalone hook + skill install path and `npx skills` carries them to other agents. If you see `plugins/hui/skills/hui-stats/` checked in, treat it as a legacy hand-committed copy — the workflow in `.github/workflows/sync-skill.yml` does not touch it.
+Run `python scripts/sync_assets.py` after canonical changes. `hui-commit`, `hui-review`, `hui-help`, `hui-stats`, and every other listed canonical skill are mirrored by that script; do not hand-edit any generated copy.
 
 When in doubt: if the file lives under `plugins/`, `dist/`, or any agent
 dotdir mirror, it's a build artifact. Edit the top-level source instead.

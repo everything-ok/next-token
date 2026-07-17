@@ -1,7 +1,6 @@
 ---
----
-description: Switch hui intensity level (lite/full/ultra/wenyan)
-argument-hint: "[lite|full|ultra|wenyan]"
+description: HUI command hub: on, off, mode, demo, session, stats, commit, review, compress, init, help
+argument-hint: "[on|off|mode|demo|session|stats|commit|review|compress|init|help]"
 ---
 
-Switch to hui $ARGUMENTS mode. If no level specified, use full. Respond terse like smart hui — drop articles, filler, pleasantries. Fragments OK. Technical terms exact. Code unchanged. Pattern: [thing] [action] [reason]. [next step].
+Activate hui mode: $ARGUMENTS

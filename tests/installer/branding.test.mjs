@@ -10,7 +10,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
 const WORKSPACE = path.resolve(ROOT, '..');
 const PACKAGE = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-const REPOSITORY = '2454760302hui/next-token';
+const REPOSITORY = 'HUI/next-token';
 const SKILLS = ['hui', 'hui-commit', 'hui-compress', 'hui-help', 'hui-review', 'hui-stats', 'huicrew'];
 
 function read(relative) {

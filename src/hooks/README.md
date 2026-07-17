@@ -24,7 +24,7 @@ If you installed hui standalone (without the plugin), the unified Node installer
 
 - Reads `$CLAUDE_CONFIG_DIR/.hui-active` (default `~/.claude/.hui-active`) and outputs a colored badge
 - Shows `[HUI]`, `[HUI:ULTRA]`, `[HUI:WENYAN]`, etc.
-- Appends the lifetime savings suffix `⛏ 12.4k` from `$CLAUDE_CONFIG_DIR/.hui-statusline-suffix` (written by `hui-stats.js` on each `/hui-stats` run; absent until the first run, so fresh installs render no fake number). Opt out with `HUI_STATUSLINE_SAVINGS=0`.
+- Renders only the active HUI mode badge; it does not show usage or savings counters.
 
 ## Statusline Badge
 
@@ -108,4 +108,4 @@ node bin/install.js --uninstall
 Or manually:
 1. Remove the hui hook files from `$CLAUDE_CONFIG_DIR/hooks/` (default `~/.claude/hooks/`): `hui-activate.js`, `hui-mode-tracker.js`, `hui-stats.js`, `hui-config.js`, and `hui-statusline.{sh,ps1}`.
 2. Remove the SessionStart, UserPromptSubmit, and statusLine entries from `$CLAUDE_CONFIG_DIR/settings.json`.
-3. Delete `$CLAUDE_CONFIG_DIR/.hui-active` (and `$CLAUDE_CONFIG_DIR/.hui-statusline-suffix` if you ran `/hui-stats`).
+3. Delete `$CLAUDE_CONFIG_DIR/.hui-active`. Existing `.hui-statusline-suffix` files are ignored by current statusline scripts.

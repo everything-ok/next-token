@@ -1,6 +1,6 @@
 ---
-description: Real session token usage + lifetime savings + USD. Tweetable line via --share.
-argument-hint: "[--share|--all|--since 7d]"
+description: Observed local Claude Code session usage. No savings or cost estimates.
+argument-hint: "[--all|--since 7d]"
 ---
 
 /hui-stats $ARGUMENTS

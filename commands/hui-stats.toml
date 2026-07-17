@@ -1,2 +1,2 @@
-description = "Real session token usage + lifetime savings + USD. Tweetable line via --share."
+description = "Observed local Claude Code session usage. No savings or cost estimates."
 prompt = "/hui-stats {{args}}"

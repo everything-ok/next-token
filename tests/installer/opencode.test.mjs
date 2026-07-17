@@ -69,7 +69,7 @@ test('opencode fresh install drops plugin, commands, agents, skills, AGENTS.md, 
     assert.ok(fs.existsSync(path.join(ocDir, 'plugins', 'hui', 'package.json')), 'plugin package.json missing');
     assert.ok(fs.existsSync(path.join(ocDir, 'plugins', 'hui', 'hui-config.cjs')), 'hui-config.cjs sibling missing');
 
-    for (const f of ['hui.md', 'hui-commit.md', 'hui-review.md', 'hui-compress.md', 'hui-stats.md', 'hui-help.md']) {
+    for (const f of ['hui.md', 'hui-global.md', 'hui-lite.md', 'hui-ultra.md', 'hui-wenyan.md', 'hui-wenyan-lite.md', 'hui-wenyan-full.md', 'hui-wenyan-ultra.md', 'hui-commit.md', 'hui-review.md', 'hui-compress.md', 'hui-help.md', 'hui-init.md']) {
       assert.ok(fs.existsSync(path.join(ocDir, 'commands', f)), `command ${f} missing`);
     }
     for (const f of ['huicrew-investigator.md', 'huicrew-builder.md', 'huicrew-reviewer.md']) {

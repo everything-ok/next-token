@@ -4,10 +4,10 @@
   "description": "Ultra-compressed communication mode. Cut filler. Keep technical accuracy.",
   "author": {
     "name": "HUI Contributors",
-    "url": "https://github.com/2454760302hui"
+    "url": "https://github.com/HUI"
   },
-  "homepage": "https://github.com/2454760302hui/next-token",
-  "repository": "https://github.com/2454760302hui/next-token",
+  "homepage": "https://github.com/HUI/next-token",
+  "repository": "https://github.com/HUI/next-token",
   "license": "MIT",
   "keywords": [
     "productivity",
@@ -25,9 +25,9 @@
     "capabilities": [
       "Write"
     ],
-    "websiteURL": "https://github.com/2454760302hui/next-token",
-    "privacyPolicyURL": "https://github.com/2454760302hui/next-token/blob/main/README.md",
-    "termsOfServiceURL": "https://github.com/2454760302hui/next-token/blob/main/LICENSE",
+    "websiteURL": "https://github.com/HUI/next-token",
+    "privacyPolicyURL": "https://github.com/HUI/next-token/blob/main/README.md",
+    "termsOfServiceURL": "https://github.com/HUI/next-token/blob/main/LICENSE",
     "defaultPrompt": [
       "Use hui mode. Cut filler. Keep technical accuracy."
     ],

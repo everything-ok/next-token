@@ -42,6 +42,33 @@ const fields = (process.env.HUI_SHRINK_FIELDS || 'description')
 
 const { getSpawnOptions } = require('./spawn-options');
 
+const LIST_METHODS = new Set([
+  'tools/list',
+  'prompts/list',
+  'resources/list',
+  'resources/templates/list',
+]);
+const methodsByRequestId = new Map();
+
+function requestKey(id) {
+  return `${typeof id}:${String(id)}`;
+}
+
+function rememberRequestMethod(msg) {
+  if (msg && Object.prototype.hasOwnProperty.call(msg, 'id') &&
+      typeof msg.method === 'string') {
+    methodsByRequestId.set(requestKey(msg.id), msg.method);
+  }
+}
+
+function takeRequestMethod(msg) {
+  if (!msg || !Object.prototype.hasOwnProperty.call(msg, 'id')) return undefined;
+  const key = requestKey(msg.id);
+  const method = methodsByRequestId.get(key);
+  methodsByRequestId.delete(key);
+  return method;
+}
+
 const upstream = spawn(args[0], args.slice(1), getSpawnOptions());
 
 upstream.on('error', err => {
@@ -70,11 +97,10 @@ function makeLineBuffer(onLine) {
   };
 }
 
-function transformResponse(msg) {
-  // Compress description fields on list-style responses. Match by method
-  // shape — we don't always know the original request's method, so we
-  // detect by the presence of a tools/prompts/resources array.
-  if (!msg || !msg.result || typeof msg.result !== 'object') return msg;
+function transformResponse(msg, method) {
+  // Only transform responses for known MCP list methods. A tools/call result can
+  // legitimately contain a `tools` array, so response shape alone is unsafe.
+  if (!LIST_METHODS.has(method) || !msg || !msg.result || typeof msg.result !== 'object') return msg;
   const r = msg.result;
   let compressedSomething = false;
 
@@ -116,10 +142,16 @@ upstream.stdout.on('data', makeLineBuffer(line => {
     process.stdout.write(line + '\n');
     return;
   }
-  const out = transformResponse(msg);
+  const out = transformResponse(msg, takeRequestMethod(msg));
   process.stdout.write(JSON.stringify(out) + '\n');
 }));
 
-// Client → us → upstream. Pass through unchanged for v1.
-process.stdin.on('data', chunk => upstream.stdin.write(chunk));
+// Client → us → upstream. Remember request methods by JSON-RPC id so the
+// matching response can be transformed safely; notifications have no response.
+process.stdin.on('data', makeLineBuffer(line => {
+  try { rememberRequestMethod(JSON.parse(line)); } catch {
+    // Keep malformed/non-JSON traffic transparent to the upstream server.
+  }
+  upstream.stdin.write(line + '\n');
+}));
 process.stdin.on('end',  () => upstream.stdin.end());

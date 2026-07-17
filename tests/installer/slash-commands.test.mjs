@@ -19,12 +19,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..', '..');
 const COMMANDS_DIR = path.join(REPO_ROOT, 'commands');
 const STATS_TOML = path.join(COMMANDS_DIR, 'hui-stats.toml');
+const { commandsFor } = await import(pathToFileURL(path.join(REPO_ROOT, 'src', 'command-capabilities.js')).href);
 
 // Mirrors the live regex in src/hooks/hui-mode-tracker.js (the
 // `statsMatch` line). Anything that fails this here would also fail in
@@ -59,11 +60,11 @@ test('#470 hui-stats.toml prompt is intercepted by the mode-tracker regex', () =
 
 // ── #571: Claude Code only discovers commands/*.md ─────────────────────────
 
-// Every command documented for Claude Code. Each needs a .md (Claude Code)
-// AND a .toml (Gemini extension) sibling — the formats coexist in commands/.
-const DOCUMENTED_COMMANDS = ['hui', 'hui-commit', 'hui-review', 'hui-stats', 'hui-init'];
+// This list comes from the canonical command capability contract.
+const CLAUDE_COMMANDS = commandsFor('claude').map(command => command.name);
+const GEMINI_COMMANDS = commandsFor('gemini').map(command => command.name);
 
-for (const name of DOCUMENTED_COMMANDS) {
+for (const name of CLAUDE_COMMANDS) {
   test(`#571 commands/${name}.md exists so Claude Code registers /${name}`, () => {
     const mdPath = path.join(COMMANDS_DIR, `${name}.md`);
     assert.ok(
@@ -81,7 +82,7 @@ for (const name of DOCUMENTED_COMMANDS) {
     assert.ok(desc && desc[1].trim().length > 0, `${name}.md must declare a non-empty description`);
   });
 
-  test(`#571 commands/${name}.toml still ships for Gemini`, () => {
+  test(`#571 commands/${name}.toml still ships for Gemini`, { skip: !GEMINI_COMMANDS.includes(name) }, () => {
     assert.ok(
       fs.existsSync(path.join(COMMANDS_DIR, `${name}.toml`)),
       `commands/${name}.toml missing — Gemini CLI extensions only read TOML commands.`,
@@ -100,7 +101,7 @@ test('#571 hui-stats.md body is intercepted by the mode-tracker regex', () => {
 });
 
 test('#571 command .md bodies use $ARGUMENTS, never the TOML {{args}} placeholder', () => {
-  for (const name of DOCUMENTED_COMMANDS) {
+  for (const name of CLAUDE_COMMANDS) {
     const body = fs.readFileSync(path.join(COMMANDS_DIR, `${name}.md`), 'utf8');
     assert.ok(
       !body.includes('{{args}}'),

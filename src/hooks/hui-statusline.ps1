@@ -38,25 +38,3 @@ if ([string]::IsNullOrEmpty($Mode) -or $Mode -eq "full") {
     $Suffix = $Mode.ToUpperInvariant()
     [Console]::Write("${Esc}[38;5;172m[HUI:$Suffix]${Esc}[0m")
 }
-
-# Savings suffix: on by default. Opt out via HUI_STATUSLINE_SAVINGS=0.
-# Reads a pre-rendered string written by hui-stats.js. Refuses reparse
-# points and strips control bytes (matches statusline.sh hardening). Until
-# /hui-stats has run at least once, the suffix file is absent and nothing
-# is rendered — safe default for fresh installs.
-if ($env:HUI_STATUSLINE_SAVINGS -ne "0") {
-    $SavingsFile = Join-Path $ClaudeDir ".hui-statusline-suffix"
-    if (Test-Path $SavingsFile) {
-        try {
-            $SavingsItem = Get-Item -LiteralPath $SavingsFile -Force -ErrorAction Stop
-            if (-not ($SavingsItem.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -and
-                $SavingsItem.Length -le 64) {
-                $Savings = (Get-Content -LiteralPath $SavingsFile -Encoding UTF8 -Raw -ErrorAction Stop).TrimEnd()
-                $Savings = ($Savings -replace '[\x00-\x1F]', '')
-                if ($Savings.Length -gt 0) {
-                    [Console]::Write(" ${Esc}[38;5;172m$Savings${Esc}[0m")
-                }
-            }
-        } catch {}
-    }
-}

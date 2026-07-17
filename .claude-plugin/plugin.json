@@ -1,9 +1,9 @@
 {
   "name": "hui",
-  "description": "Ultra-compressed communication mode. Cuts 65% of output tokens (measured) while keeping full technical accuracy by speaking like a hui.",
+  "description": "Concise communication mode for Claude Code. Keeps technical terms, code, and safety guidance intact while reducing conversational filler.",
   "author": {
     "name": "HUI Contributors",
-    "url": "https://github.com/2454760302hui"
+    "url": "https://github.com/HUI"
   },
   "hooks": {
     "SessionStart": [

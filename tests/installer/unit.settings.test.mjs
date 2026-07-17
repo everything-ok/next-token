@@ -192,6 +192,23 @@ test('removeHuiHooks removes the Windows statusline-stats wiring (hui-stats.js /
   assert.equal(s.hooks, undefined);
 });
 
+test('deduplicateManagedHooks removes duplicate managed registrations but preserves user hooks', () => {
+  const s = {
+    hooks: {
+      SessionStart: [
+        { hooks: [{ type: 'command', command: 'node /one/hui-activate.js' }] },
+        { hooks: [{ type: 'command', command: 'node /two/hui-activate.js' }] },
+        { hooks: [{ type: 'command', command: 'node /two/user-hook.js' }] },
+      ],
+    },
+  };
+  assert.equal(SETTINGS.deduplicateManagedHooks(s), 1);
+  assert.equal(s.hooks.SessionStart.length, 2);
+  assert.match(s.hooks.SessionStart[0].hooks[0].command, /hui-activate/);
+  assert.match(s.hooks.SessionStart[1].hooks[0].command, /user-hook/);
+});
+
+
 test('rewriteLegacyManagedHookCommands rewrites bare-node managed scripts', () => {
   const s = {
     hooks: {

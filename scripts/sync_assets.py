@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Synchronize generated HUI skill mirrors from canonical sources.
 
-Use --check in CI to fail when committed mirrors drift.
+Use --check in CI to fail when committed mirrors drift. Every managed mirror is
+built from ``skills/`` and ``agents/``; stale managed files are detected too.
 """
 from __future__ import annotations
 
 import argparse
-import shutil
+import os
 import sys
 import tempfile
 import zipfile
@@ -15,7 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = ROOT.parent
 SKILL_NAMES = ("hui", "hui-commit", "hui-compress", "hui-help", "hui-review", "hui-stats", "huicrew")
-HOST_MIRRORS = (".agents", ".augment", ".iflow", ".kiro")
+HOST_MIRRORS = (".agents", ".augment", ".iflow", ".kiro", ".qwen")
 
 
 def display_path(path: Path) -> Path:
@@ -25,31 +26,61 @@ def display_path(path: Path) -> Path:
         return path.relative_to(WORKSPACE_ROOT)
 
 
+def atomic_write(target: Path, content: bytes) -> None:
+    """Replace one generated asset without exposing a partial target file."""
+    target.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=target.parent, prefix=f".{target.name}.", delete=False) as handle:
+        handle.write(content)
+        handle.flush()
+        os.fsync(handle.fileno())
+        temporary = Path(handle.name)
+    try:
+        os.replace(temporary, target)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def source_files(source: Path) -> dict[Path, bytes]:
+    return {
+        path.relative_to(source): path.read_bytes()
+        for path in sorted(source.rglob("*"))
+        if path.is_file() and "__pycache__" not in path.parts
+    }
+
+
+def sync_tree(source: Path, target: Path, check: bool) -> bool:
+    """Mirror source exactly, including detection/removal of stale managed files."""
+    changed = False
+    expected = source_files(source)
+    for relative, content in expected.items():
+        destination = target / relative
+        if destination.exists() and destination.read_bytes() == content:
+            continue
+        if check:
+            print(f"drift: {display_path(destination)}")
+        else:
+            atomic_write(destination, content)
+            print(f"sync: {display_path(destination)}")
+        changed = True
+
+    return changed
+
+
 def copy_file(source: Path, target: Path, check: bool) -> bool:
     expected = source.read_bytes()
     if target.exists() and target.read_bytes() == expected:
         return False
     if check:
         print(f"drift: {display_path(target)}")
-        return True
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(expected)
-    print(f"sync: {display_path(target)}")
+    else:
+        atomic_write(target, expected)
+        print(f"sync: {display_path(target)}")
     return True
-
-
-def sync_tree(source: Path, target: Path, check: bool) -> bool:
-    changed = False
-    for path in sorted(source.rglob("*")):
-        if not path.is_file() or "__pycache__" in path.parts:
-            continue
-        changed |= copy_file(path, target / path.relative_to(source), check)
-    return changed
 
 
 def build_skill_zip(check: bool) -> bool:
     target = ROOT / "dist" / "hui.skill"
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(dir=target.parent if target.parent.exists() else None) as tmp:
         candidate = Path(tmp) / "hui.skill"
         with zipfile.ZipFile(candidate, "w", zipfile.ZIP_DEFLATED) as archive:
             source = ROOT / "skills" / "hui"
@@ -64,10 +95,9 @@ def build_skill_zip(check: bool) -> bool:
         return False
     if check:
         print("drift: dist/hui.skill")
-        return True
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_bytes(expected)
-    print("sync: dist/hui.skill")
+    else:
+        atomic_write(target, expected)
+        print("sync: dist/hui.skill")
     return True
 
 
@@ -77,18 +107,15 @@ def main() -> int:
     args = parser.parse_args()
     changed = False
 
-    # Codex plugin gets all canonical skills plus Huicrew agent definitions.
     for skill in SKILL_NAMES:
         changed |= sync_tree(ROOT / "skills" / skill, ROOT / "plugins" / "hui" / "skills" / skill, args.check)
     for agent in sorted((ROOT / "agents").glob("huicrew-*.md")):
         changed |= copy_file(agent, ROOT / "plugins" / "hui" / "agents" / agent.name, args.check)
 
-    # Agent-host mirrors contain skills only. Keep them byte-identical to source.
     for host in HOST_MIRRORS:
         for skill in SKILL_NAMES:
             changed |= sync_tree(ROOT / "skills" / skill, ROOT / host / "skills" / skill, args.check)
 
-    # Root workspace .agents is another published skill host, outside hui-main.
     for skill in SKILL_NAMES:
         changed |= sync_tree(ROOT / "skills" / skill, WORKSPACE_ROOT / ".agents" / "skills" / skill, args.check)
 

@@ -1,9 +1,8 @@
 ---
 name: hui-compress
 description: >
-  Compress natural language memory files (CLAUDE.md, todos, preferences) into hui format
-  to save input tokens. Preserves all technical substance, code, URLs, and structure.
-  Compressed version overwrites the original file. Human-readable backup saved as FILE.original.md.
+  Rewrite supported natural-language memory files (CLAUDE.md, todos, preferences) into concise hui format.
+  Preserves protected structure and writes a human-readable FILE.original.md backup.
   Trigger: /hui-compress FILEPATH or "compress memory file"
 ---
 
@@ -11,7 +10,7 @@ description: >
 
 ## Purpose
 
-Compress natural language files (CLAUDE.md, todos, preferences) into hui-speak to reduce input tokens. Compressed version overwrites original. Human-readable backup saved as `<filename>.original.md`.
+Rewrite supported natural-language files (CLAUDE.md, todos, preferences) into hui-style prose. The rewritten version overwrites original and a human-readable backup is saved as `<filename>.original.md`. This tool does not promise token, cost, latency, or accuracy results.
 
 ## Trigger
 
@@ -23,12 +22,15 @@ Compress natural language files (CLAUDE.md, todos, preferences) into hui-speak t
 
 2. From the directory containing this SKILL.md, run:
 
-python3 -m scripts <absolute_filepath>
+python3 -m scripts [--preview | --restore] <absolute_filepath>
+
+Use `--preview` to generate and validate compressed output without writing either file. Use `--restore` to atomically restore the matching out-of-tree backup. For changed prose only, use `--incremental --base <baseline-file>`; add `--dry-run` to inspect the eligible changed blocks without a model call.
 
 3. The CLI will:
 - detect file type (no tokens)
 - call Claude to compress
-- validate output (no tokens)
+- Output is structurally validated before any write, including exact protected content and list/table hierarchy
+- Writes and restores are atomic, and backups are verified before the source can change
 - if errors: cherry-pick fix with Claude (targeted fixes only, no recompression)
 - retry up to 2 times
 - if still failing after 2 retries: report error to user, leave original file untouched

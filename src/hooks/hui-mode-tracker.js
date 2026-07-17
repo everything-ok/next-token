@@ -7,6 +7,8 @@ const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
 const { getDefaultMode, safeWriteFlag, readFlag, recordModeChange, VALID_MODES } = require('./hui-config');
+const { modeForCommand, normalizeMode } = require('./hui-command-contract');
+const { parseHuiCommand, modeForParsedCommand } = require('../hui-command-parser');
 
 // Modes handled by their own slash commands (/hui-commit, etc.) — not
 // selectable via /hui <arg>.
@@ -30,12 +32,17 @@ process.stdin.on('end', () => {
     // Collapse whitespace so phrase triggers still match multiline prompts —
     // every regex below sees a single-line prompt (#598).
     const prompt = (data.prompt || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    // Command engines expand `/hui <action>` into this fixed template before
+    // hooks run. Restore canonical syntax so all dispatch paths see one form.
+    const templateMatch = /^activate hui mode:\s*(.*)$/i.exec(prompt);
+    const commandPrompt = templateMatch ? `/hui ${templateMatch[1].trim()}`.trim() : prompt;
 
     // Deactivation intent — computed FIRST so "turn hui mode off" never
     // falls through to the activation patterns (#598: the old contiguous
     // "turn off" phrasing missed the "turn X off" word order entirely, and
     // the activation regex then re-armed hui at the default level).
     const wantsOff =
+      prompt === 'stop-hui' ||
       /\b(stop|disable|deactivate|quit|exit|kill)\s+(the\s+)?hui\b/.test(prompt) ||
       /\bhui(\s+mode)?\s+(off|stop|disabled?)\b/.test(prompt) ||
       /\bturn\s+off\s+(the\s+)?hui\b/.test(prompt) ||
@@ -70,17 +77,44 @@ process.stdin.on('end', () => {
       }
     }
 
-    // /hui-stats [--share] — block the prompt and inject stats output as
-    // the hook's reason. The script reads the active session log, so we pass
-    // transcript_path through when Claude Code provides it.
-    const statsMatch = /^\/hui(?::hui)?-stats(?:\s+(.*))?$/.exec(prompt);
+    // /hui demo renders a fixed local example. It must not activate a mode or
+    // read/write session state, so handle it before all normal mode processing.
+    if (/^\/hui(?::hui)?\s+demo$/.test(commandPrompt)) {
+      process.stdout.write(JSON.stringify({
+        decision: 'block',
+        reason: '本地文本示例\n\n普通写法：React 组件重复渲染，通常因为每次 render 都创建新的对象引用。内联对象作为 prop 会改变引用，触发重新渲染。可用 useMemo 稳定引用。\n\n简洁写法：每次 render 新对象引用。内联对象 prop = 新引用 = 重渲染。用 useMemo。\n\n这是固定本地文本示例：不调用模型，不读取或写入会话、模式或统计状态。'
+      }));
+      return;
+    }
+
+    // /hui-session summarizes or compacts only the transcript path supplied by
+    // Claude Code. `--compact` writes a validated sibling copy; source stays intact.
+    if (/^\/hui(?::hui)?(?:-session(?:\s+--compact)?|\s+session(?:\s+--compact)?)$/.test(commandPrompt)) {
+      if (!data.transcript_path) {
+        process.stdout.write(JSON.stringify({ decision: 'block', reason: 'hui-session: current Claude Code transcript path is unavailable. No file was read.' }));
+        return;
+      }
+      try {
+        const compact = /(?:\s+session\s+--compact|-session\s+--compact)$/.test(prompt);
+        const argv = [path.join(__dirname, 'hui-session.js'), '--session-file', data.transcript_path];
+        if (compact) argv.push('--compact');
+        const out = execFileSync(process.execPath, argv, { encoding: 'utf8', timeout: 5000 });
+        process.stdout.write(JSON.stringify({ decision: 'block', reason: out.trim() }));
+      } catch (e) {
+        process.stdout.write(JSON.stringify({ decision: 'block', reason: 'hui-session: local operation unavailable. Original transcript and HUI state were not modified.' }));
+      }
+      return;
+    }
+
+    // /hui-stats — block the prompt and inject locally observed session usage.
+    // The script reads the active session log when Claude Code supplies it.
+    const statsMatch = /^\/hui(?::hui)?(?:-stats|\s+stats)(?:\s+(.*))?$/.exec(commandPrompt);
     if (statsMatch) {
       const tailArgs = (statsMatch[1] || '').trim().split(/\s+/).filter(Boolean);
       try {
         const statsPath = path.join(__dirname, 'hui-stats.js');
         const argv = [statsPath];
         if (data.transcript_path) argv.push('--session-file', data.transcript_path);
-        if (tailArgs.includes('--share')) argv.push('--share');
         if (tailArgs.includes('--all')) argv.push('--all');
         const sinceIdx = tailArgs.indexOf('--since');
         if (sinceIdx !== -1 && tailArgs[sinceIdx + 1]) {
@@ -97,60 +131,27 @@ process.stdin.on('end', () => {
       return;
     }
 
-    // Match /hui commands. Independent one-shot modes remember the prose
-    // mode active before them so the next ordinary prompt restores it (#599)
-    // — SKILL.md promises "Level persist until changed or session end", and a
-    // one-shot skill invocation should not count as "changed" forever.
+    // Canonical `/hui <action>` grammar plus retained legacy aliases. Independent
+    // one-shot modes remember the prose mode active before them and restore it on
+    // the next ordinary prompt.
     let setIndependentThisTurn = false;
-    if (prompt.startsWith('/hui')) {
-      const parts = prompt.split(/\s+/);
-      const cmd = parts[0]; // /hui, /hui-commit, /hui-review, etc.
-      const arg = parts[1] || '';
+    const parsed = parseHuiCommand(commandPrompt);
+    const mode = modeForParsedCommand(parsed, getDefaultMode());
 
-      let mode = null;
-
-      // Marketplace plugin installs surface commands namespaced as
-      // /hui:hui-<name> — accept both forms for every skill (#599:
-      // only compress and stats had the namespaced variant).
-      if (cmd === '/hui-commit' || cmd === '/hui:hui-commit') {
-        mode = 'commit';
-      } else if (cmd === '/hui-review' || cmd === '/hui:hui-review') {
-        mode = 'review';
-      } else if (cmd === '/hui-compress' || cmd === '/hui:hui-compress') {
-        mode = 'compress';
-      } else if (cmd === '/hui' || cmd === '/hui:hui') {
-        // Bare /hui → activate at configured default
-        if (!arg) {
-          mode = getDefaultMode();
-        } else if (arg === 'off' || arg === 'stop' || arg === 'disable') {
-          mode = 'off';
-        } else if (arg === 'wenyan-full') {
-          // Canonical alias — config stores as 'wenyan'
-          mode = 'wenyan';
-        } else if (VALID_MODES.includes(arg) && !INDEPENDENT_MODES.has(arg)) {
-          mode = arg;
+    if (mode && mode !== 'off') {
+      if (INDEPENDENT_MODES.has(mode)) {
+        const current = readFlag(flagPath);
+        if (current && !INDEPENDENT_MODES.has(current)) {
+          safeWriteFlag(prevPath, current);
         }
-        // Unknown arg → mode stays null, flag untouched (no silent overwrite)
+        setIndependentThisTurn = true;
       }
-
-      if (mode && mode !== 'off') {
-        if (INDEPENDENT_MODES.has(mode)) {
-          // Save the prose mode being displaced — but never overwrite an
-          // already-saved one with another independent mode (/hui-commit
-          // followed by /hui-review must still restore the original).
-          const current = readFlag(flagPath);
-          if (current && !INDEPENDENT_MODES.has(current)) {
-            safeWriteFlag(prevPath, current);
-          }
-          setIndependentThisTurn = true;
-        }
-        recordModeChange(claudeDir, mode); // #601
-        safeWriteFlag(flagPath, mode);
-      } else if (mode === 'off') {
-        recordModeChange(claudeDir, null); // #601
-        try { fs.unlinkSync(flagPath); } catch (e) {}
-        try { fs.unlinkSync(prevPath); } catch (e) {}
-      }
+      recordModeChange(claudeDir, mode);
+      safeWriteFlag(flagPath, mode);
+    } else if (mode === 'off') {
+      recordModeChange(claudeDir, null);
+      try { fs.unlinkSync(flagPath); } catch (e) {}
+      try { fs.unlinkSync(prevPath); } catch (e) {}
     }
 
     // Apply deactivation detected above

@@ -26,7 +26,8 @@ Modes:
 Skills:
   /hui-commit       terse Conventional Commits
   /hui-review       one-line PR comments
-  /hui-stats        session token savings
+  /hui demo         本地文本示例
+  /hui-stats        observed local session usage
 
 Deactivate:
   "stop hui" or "normal mode"

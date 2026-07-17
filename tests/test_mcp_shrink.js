@@ -2,6 +2,8 @@
 // Tests for src/mcp-servers/hui-shrink/compress.js — pure-Node prose compressor.
 // Run: node tests/test_mcp_shrink.js
 
+const { spawn } = require('child_process');
+const { once } = require('events');
 const fs = require('fs');
 const path = require('path');
 const assert = require('assert');
@@ -16,8 +18,13 @@ const { getSpawnOptions } = require(
 
 let passed = 0;
 let failed = 0;
+const asyncTests = [];
 
 function test(name, fn) {
+  if (fn.constructor.name === 'AsyncFunction') {
+    asyncTests.push({ name, fn });
+    return;
+  }
   try {
     fn();
     passed++;
@@ -91,7 +98,7 @@ test('compresses real MCP-style description', () => {
   const { compressed, before, after } = compress(input);
   assert.ok(after < before, `expected size reduction, got ${before}→${after}`);
   // ~30% reduction is the floor; descriptions like this should compress well.
-  assert.ok((before - after) / before > 0.15, `wanted >15% savings, got ${(before - after) / before}`);
+  assert.ok((before - after) / before > 0.15, `expected concise rewrite, got ${(before - after) / before}`);
   // Substance preserved
   assert.match(compressed, /weather/i);
   assert.match(compressed, /Fahrenheit/i);
@@ -218,5 +225,66 @@ test('package.json "files" ships every module the entry points require (#597)', 
   }
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-process.exit(failed ? 1 : 0);
+test('proxy only compresses responses correlated to MCP list requests', async () => {
+  const upstream = path.join(ROOT, 'tests', 'fixtures', 'mcp-shrink-upstream.js');
+  const proxy = path.join(ROOT, 'src', 'mcp-servers', 'hui-shrink', 'index.js');
+  const child = spawn(process.execPath, [proxy, 'node', upstream], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+  const responses = [];
+  let output = '';
+  child.stdout.on('data', chunk => {
+    output += chunk.toString('utf8');
+    let newline;
+    while ((newline = output.indexOf('\n')) !== -1) {
+      const line = output.slice(0, newline);
+      output = output.slice(newline + 1);
+      if (line.trim()) responses.push(JSON.parse(line));
+    }
+  });
+
+  child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) + '\n');
+  child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 'call-1', method: 'tools/call' }) + '\n');
+
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('timed out waiting for fixture responses')), 2000);
+    const interval = setInterval(() => {
+      if (responses.length === 2) {
+        clearTimeout(timeout);
+        clearInterval(interval);
+        resolve();
+      }
+    }, 10);
+  });
+
+  child.stdin.end();
+  await once(child, 'exit');
+
+  const listResponse = responses.find(response => response.id === 1);
+  const callResponse = responses.find(response => response.id === 'call-1');
+  assert.ok(listResponse, 'missing tools/list response');
+  assert.ok(callResponse, 'missing tools/call response');
+  assert.doesNotMatch(listResponse.result.tools[0].description, /\bthe\b/i);
+  assert.strictEqual(
+    callResponse.result.tools[0].description,
+    'The tool returns the current weather for a city.',
+    'tools/call payload must not be transformed merely because it contains a tools array'
+  );
+});
+
+async function runAsyncTests() {
+  for (const { name, fn } of asyncTests) {
+    try {
+      await fn();
+      passed++;
+      console.log(`  ✓ ${name}`);
+    } catch (e) {
+      failed++;
+      console.error(`  ✗ ${name}\n    ${e.message}`);
+    }
+  }
+  console.log(`\n${passed} passed, ${failed} failed`);
+  process.exit(failed ? 1 : 0);
+}
+
+runAsyncTests();

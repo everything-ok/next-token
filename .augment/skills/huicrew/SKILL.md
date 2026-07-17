@@ -1,82 +1,80 @@
 ---
 name: huicrew
 description: >
-  Decision guide for delegating to hui-style subagents. Tells the main
-  thread WHEN to spawn `huicrew-investigator` (locate code), `huicrew-builder`
-  (1-2 file edit), or `huicrew-reviewer` (diff review) instead of doing the
-  work inline or using vanilla `Explore`. Subagent output is hui-compressed
-  so the tool-result injected back into main context is ~60% smaller — main
-  context lasts longer across long sessions.
-  Trigger: "delegate to subagent", "use huicrew", "spawn investigator/builder/reviewer",
-  "save context", "compressed agent output".
+  Decision guide for delegating to hui-style subagents. Tells main thread when
+  to spawn `huicrew-investigator` (locate code), `huicrew-builder` (1-2 file
+  edit), or `huicrew-reviewer` (diff review) instead of working inline.
+  Subagents return intentionally terse structured findings. This skill does not
+  measure or guarantee token, context, cost, latency, or quality outcomes.
+  Trigger: "delegate to subagent", "use huicrew", "spawn investigator/builder/reviewer".
 ---
 
-Huicrew = three subagent presets that emit hui output. Same job as Anthropic defaults (`Explore`, edit-style agents, reviewer); difference is the tool-result they return is compressed, so main context shrinks per delegation.
+Huicrew = three subagent presets that emit concise structured output. Role semantics are portable; exact agent names, tool access, and host behavior depend on the installed host integration.
 
 ## When to use huicrew vs alternatives
 
 | Task | Use |
 |---|---|
 | "Where is X defined / what calls Y / list uses of Z" | `huicrew-investigator` |
-| Same but you also want suggestions/architecture commentary | `Explore` (vanilla) |
+| Same but you also want suggestions/architecture commentary | Host exploration agent or main thread |
 | Surgical edit, ≤2 files, scope obvious | `huicrew-builder` |
-| New feature / 3+ files / cross-cutting refactor | Main thread or `feature-dev:code-architect` |
+| New feature / 3+ files / cross-cutting refactor | Main thread or host architecture workflow |
 | Review diff, branch, or file for bugs | `huicrew-reviewer` |
-| Deep code review with rationale + alternatives | `Code Reviewer` (vanilla) |
-| One-line answer you already know | Main thread, no subagent |
+| Deep review with rationale + alternatives | Host code-review workflow |
+| One-line answer already known | Main thread, no subagent |
 
-Rule of thumb: **if you'd want the subagent's output in 1/3 the tokens, pick huicrew. If you'd want prose, pick vanilla.**
-
-## Why this exists (the real win)
-
-Subagent tool results get injected into main context verbatim. A vanilla `Explore` that returns 2k tokens of prose costs 2k tokens of main-context budget every time. The same finding from `huicrew-investigator` returns ~700 tokens. Across 20 delegations in one session that's the difference between context exhaustion and finishing the task.
+Use Huicrew when a terse structured result is enough. Use host exploration/review workflows when detailed reasoning or prose is needed.
 
 ## Output contracts
 
-What main thread can rely on per agent:
-
 **`huicrew-investigator`**
+
 ```
 <Header>:
 - path:line — `symbol` — short note
 totals: <counts>.
 ```
-Or `No match.` Always file-path-first, line-number-attached, backticked symbols. Safe to grep with `path:\d+`.
+
+Or `No match.` File-path-first, line-number-attached, backticked symbols.
 
 **`huicrew-builder`**
+
 ```
 <path:line-range> — <change ≤10 words>.
 verified: <re-read OK | mismatch @ path:line>.
 ```
-Or one of: `too-big.` / `needs-confirm.` / `ambiguous.` / `regressed.` (terminal first token).
+
+Or: `too-big.` / `needs-confirm.` / `ambiguous.` / `regressed.`
 
 **`huicrew-reviewer`**
+
 ```
 path:line: <emoji> <severity>: <problem>. <fix>.
 totals: N🔴 N🟡 N🔵 N❓
 ```
-Or `No issues.` Findings sorted file → line ascending.
+
+Or `No issues.` Findings sorted file then line.
 
 ## Chaining patterns
 
-**Locate → fix → verify** (most common):
-1. `huicrew-investigator` returns site list.
-2. Main thread picks 1-2 sites, hands paths to `huicrew-builder`.
-3. `huicrew-reviewer` audits the diff.
+**Locate → fix → verify**
 
-**Parallel scout** (when investigation is broad):
-Spawn 2-3 `huicrew-investigator` calls in one message (different angles: defs vs callers vs tests). Aggregate in main thread.
+1. `huicrew-investigator` returns candidate sites.
+2. Main thread selects one or two scoped edits for `huicrew-builder`.
+3. `huicrew-reviewer` audits resulting diff.
 
-**Single-shot edit** (when site is already known):
-Skip investigator. Hand exact path:line to `huicrew-builder` directly.
+**Parallel scout**
 
-## What NOT to do
+Spawn separate investigator calls for definitions, callers, and tests. Aggregate in main thread.
 
-- Don't use `huicrew-builder` when you don't already know the file. Spawn investigator first or main thread will eat tokens passing context.
-- Don't chain `huicrew-investigator → huicrew-builder` for a 5-file refactor. Builder will return `too-big.` and you'll have wasted a turn.
-- Don't ask `huicrew-reviewer` for "general feedback" — it returns findings only, no architecture opinions. Use `Code Reviewer` for that.
-- Don't expect prose. Huicrew output is structured, sometimes terse to the point of cryptic. If a human will read it directly, paraphrase.
+**Single-shot edit**
 
-## Auto-clarity (inherited)
+When site is known, give exact `path:line` to builder directly.
 
-Subagents drop hui → normal English for security warnings, irreversible-action confirmations, and any output where fragment ambiguity could be misread. Resume hui after.
+## Boundaries
+
+- Builder refuses scopes above two files.
+- Investigator is read-only and does not propose fixes.
+- Reviewer returns findings, not architecture decisions.
+- Concise output can be cryptic. Paraphrase before presenting it directly to a human when needed.
+- Security warnings, irreversible operations, and ambiguous instructions use normal clear language.

@@ -30,8 +30,8 @@
 // as named plugin-hook keys. 'session.created' is an event *type* dispatched
 // through the single `event` handler; the old direct-key handlers were
 // silently ignored. See:
-// https://github.com/2454760302hui/next-token/issues/418
-// https://github.com/2454760302hui/next-token/issues/421
+// https://github.com/HUI/next-token/issues/418
+// https://github.com/HUI/next-token/issues/421
 
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
@@ -146,6 +146,12 @@ function parseModeChange(promptRaw) {
     if (cmd === '/hui-commit')   return 'commit';
     if (cmd === '/hui-review')   return 'review';
     if (cmd === '/hui-compress') return 'compress';
+    if (cmd === '/hui-global')   return 'full';
+    if (cmd === '/hui-lite')     return 'lite';
+    if (cmd === '/hui-ultra')    return 'ultra';
+    if (cmd === '/hui-wenyan' || cmd === '/hui-wenyan-full') return 'wenyan';
+    if (cmd === '/hui-wenyan-lite') return 'wenyan-lite';
+    if (cmd === '/hui-wenyan-ultra') return 'wenyan-ultra';
 
     if (cmd === '/hui') {
       if (!arg)                                     return getDefaultMode();

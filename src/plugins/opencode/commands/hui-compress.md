@@ -1,5 +1,5 @@
 ---
-description: Compress a markdown/text file into hui format to save tokens
+description: Rewrite a supported markdown/text file into concise hui format with backup
 ---
 Compress the file at: $ARGUMENTS
 

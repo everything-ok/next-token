@@ -5,8 +5,8 @@
 # you'd pass to bin/install.js can be passed here; we just forward them.
 #
 # One-line install:
-#   curl -fsSL https://raw.githubusercontent.com/2454760302hui/next-token/main/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/2454760302hui/next-token/main/install.sh | bash -s -- --all
+#   curl -fsSL https://raw.githubusercontent.com/HUI/next-token/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/HUI/next-token/main/install.sh | bash -s -- --all
 #
 # Local clone:
 #   bash install.sh [flags]

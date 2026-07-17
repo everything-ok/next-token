@@ -40,8 +40,8 @@ jobs:
 
       - name: Pull latest before making changes
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "HUI Automation"
+          git config user.email "automation@hui.local"
           git pull --rebase origin main
 
       - name: Sync generated mirrors
@@ -56,6 +56,7 @@ jobs:
             .augment/skills/ \
             .iflow/skills/ \
             .kiro/skills/ \
+            .qwen/skills/ \
             dist/hui.skill
           git diff --staged --quiet && exit 0
           git commit -m "chore: sync SKILL.md copies [skip ci]"

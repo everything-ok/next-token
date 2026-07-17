@@ -1,3 +1,4 @@
+import os
 import sys
 import tempfile
 import unittest
@@ -6,6 +7,7 @@ from unittest import mock
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "skills" / "hui-compress"))
+
 from scripts import compress
 
 
@@ -42,6 +44,21 @@ class IncrementalCompressionTests(unittest.TestCase):
                 self.assertTrue(compress.compress_incremental(current, base, dry_run=True))
             call.assert_not_called()
             self.assertEqual(current.read_text(), original)
+
+    def test_invalid_incremental_output_preserves_source_and_creates_no_backup(self):
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as data_home, mock.patch.dict(
+            os.environ, {"LOCALAPPDATA": data_home}, clear=False
+        ):
+            root = Path(tmp)
+            base, current = root / "base.md", root / "current.md"
+            base.write_text("# Notes\n\nOld prose.\n")
+            original = "# Notes\n\nNew prose.\n"
+            current.write_text(original)
+            with mock.patch.object(compress, "call_claude", return_value="# Changed\n\nShort.\n"):
+                with self.assertRaisesRegex(RuntimeError, "Headings"):
+                    compress.compress_incremental(current, base)
+            self.assertEqual(current.read_text(), original)
+            self.assertFalse(compress.backup_path_for(current.resolve(), incremental=True).exists())
 
 
 if __name__ == "__main__":

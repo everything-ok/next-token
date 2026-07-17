@@ -51,7 +51,7 @@ By design, v1 is conservative:
 
 ## Status
 
-Pre-1.0 — the compression rules and field set may change. The plugin is part of the [hui ecosystem](https://github.com/2454760302hui/next-token); see the parent repo for the full skill suite (`hui`, `hui-commit`, `hui-compress`, `hui-help`, `hui-review`, `huicrew`, `hui-stats`, `hui-init`).
+Pre-1.0 — the compression rules and field set may change. The plugin is part of the [hui ecosystem](https://github.com/HUI/next-token); see the parent repo for the full skill suite (`hui`, `hui-commit`, `hui-compress`, `hui-help`, `hui-review`, `huicrew`, `hui-stats`, `hui-init`).
 
 ## License
 

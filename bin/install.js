@@ -23,8 +23,10 @@ const readline = require('readline');
 const crypto = require('crypto');
 
 const SETTINGS = require('./lib/settings');
+const MANIFEST = require('./lib/install-manifest');
 const OPENCLAW = require('./lib/openclaw');
 const { stripOpencodeAgentTools } = require('./lib/opencode-agent');
+const { commandsFor } = require('../src/command-capabilities');
 const {
   PRODUCT_NAME, PRODUCT_SLUG, NPM_PACKAGE_NAME, REPOSITORY, REPOSITORY_URL,
 } = require('./lib/brand');
@@ -47,12 +49,14 @@ const MCP_SHRINK_PKG = 'hui-shrink';
 const HOOK_FILES = [
   'package.json',
   'hui-config.js',
+  'hui-command-contract.js',
   'hui-activate.js',
   'hui-mode-tracker.js',
   'hui-stats.js',
   'hui-statusline.sh',
   'hui-statusline.ps1',
   'huicrew-model-overrides.js',
+  'hui-session.js',
 ];
 
 // ── Argv ───────────────────────────────────────────────────────────────────
@@ -669,7 +673,7 @@ function installHermes(ctx) {
 // (opencode's TUI exposes no plugin-writable badge).
 const OPENCODE_SKILL_DIRS  = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'huicrew'];
 const OPENCODE_AGENT_FILES = ['huicrew-investigator.md', 'huicrew-builder.md', 'huicrew-reviewer.md'];
-const OPENCODE_COMMAND_FILES = ['hui.md', 'hui-commit.md', 'hui-review.md', 'hui-compress.md', 'hui-stats.md', 'hui-help.md'];
+const OPENCODE_COMMAND_FILES = commandsFor('opencode').map(command => `${command.name}.md`);
 const OPENCODE_PLUGIN_REL = './plugins/hui/plugin.js';
 const OPENCODE_AGENTS_MD_SENTINEL = 'Respond terse like smart hui';
 // Marker fence for the opencode AGENTS.md ruleset block. Same convention as
@@ -1035,6 +1039,7 @@ async function installHooks(ctx) {
   // entire settings.json if any single hook is malformed (#249-class footgun).
   SETTINGS.validateHookFields(settings);
   SETTINGS.writeSettings(settingsPath, settings);
+  MANIFEST.recordTarget(configDir, 'claude', HOOK_FILES.map(f => path.join(hooksDir, f)));
   process.stdout.write(`  hooks wired in ${settingsPath}\n`);
   return 'ok';
 }
@@ -1185,11 +1190,13 @@ function uninstall(ctx) {
   }
 
   if (fs.existsSync(hooksDir)) {
-    for (const f of HOOK_FILES) {
-      const p = path.join(hooksDir, f);
-      if (!fs.existsSync(p)) continue;
-      if (!opts.dryRun) { try { fs.unlinkSync(p); } catch (_) {} }
-      note(`  removed ${p}`);
+    const manifestRemoval = opts.dryRun
+      ? { removed: HOOK_FILES.filter(f => fs.existsSync(path.join(hooksDir, f))).map(f => path.join(hooksDir, f)), preserved: [] }
+      : MANIFEST.removeTargetFiles(configDir, 'claude');
+    for (const p of manifestRemoval.removed) note(`  removed ${p}`);
+    for (const p of manifestRemoval.preserved) warn(`  preserved modified installer-managed file: ${p}`);
+    if (!manifestRemoval.removed.length && !manifestRemoval.preserved.length) {
+      note('  no Claude hook manifest found; preserving hook files whose ownership cannot be verified');
     }
     // Don't rmdir hooksDir — other plugins may use it.
   }
@@ -1356,7 +1363,18 @@ async function promptForOnly(detected) {
 }
 
 // ── --list ─────────────────────────────────────────────────────────────────
-function printList(noColor) {
+function printList(noColor, json) {
+  if (json) {
+    process.stdout.write(JSON.stringify({
+      product: PRODUCT_NAME,
+      providers: PROVIDERS.map(({ id, label, mech, detect, profile, soft }) => ({
+        id, label, mechanism: mech, detection: detect, profile: profile || null,
+        soft: !!soft,
+        capabilities: providerCapabilities(id),
+      })),
+    }, null, 2) + '\n');
+    return;
+  }
   const c = makeChalk(noColor);
   process.stdout.write(c.orange('🪨 hui provider matrix') + '\n\n');
   process.stdout.write(`  ${pad('ID', 13)} ${pad('AGENT', 22)} INSTALL MECHANISM\n`);
@@ -1371,6 +1389,15 @@ function printList(noColor) {
   process.stdout.write(c.dim('  --minimal turns hooks + init + mcp-shrink off.\n'));
 }
 
+function providerCapabilities(id) {
+  if (id === 'claude') return ['plugin', 'hooks', 'statusline', 'mcp-proxy'];
+  if (id === 'opencode') return ['native-plugin', 'skills', 'agents', 'commands', 'rules', 'mcp-proxy'];
+  if (id === 'openclaw') return ['workspace-skill', 'soul-bootstrap'];
+  if (id === 'hermes') return ['native-skills'];
+  if (id === 'gemini') return ['extension'];
+  return ['skills'];
+}
+
 function pad(s, n) { s = String(s); return s + ' '.repeat(Math.max(0, n - s.length)); }
 
 // ── Migrate-from-hui ────────────────────────────────────────────────────────
@@ -1381,9 +1408,11 @@ function migrateFromHui(opts, configDir) {
   const settingsPath = path.join(configDir, 'settings.json');
   const settings = SETTINGS.readSettings(settingsPath);
   const plan = { configDir, settingsReadable: !!settings, actions: [], writable: false };
+  // Planning must be side-effect free: all probes run against a disposable copy.
+  const candidate = settings ? JSON.parse(JSON.stringify(settings)) : null;
 
-  if (settings) {
-    const pruned = SETTINGS.pruneOrphanedManagedHooks(settings, configDir);
+  if (candidate) {
+    const pruned = SETTINGS.pruneOrphanedManagedHooks(candidate, configDir);
     if (pruned > 0) {
       plan.actions.push({
         kind: 'pruneOrphanedManagedHooks',
@@ -1391,22 +1420,22 @@ function migrateFromHui(opts, configDir) {
         detail: 'Remove settings.json SessionStart/UserPromptSubmit entries pointing at deleted HUI hook scripts',
       });
     }
-    // Duplicate managed registrations fire both plugin + standalone copies per event.
-    const ss = settings.hooks && settings.hooks.SessionStart;
-    const ups = settings.hooks && settings.hooks.UserPromptSubmit;
-    const managedCount = (arr) => (arr || []).reduce((n, g) => n + (g.hooks || []).filter(h => typeof h.command === 'string' && /hui[-/](activate|mode-tracker|stats)/.test(h.command)).length, 0);
-    if (managedCount(ss) > 1) plan.actions.push({ kind: 'deduplicateSessionStart', count: managedCount(ss), detail: 'Collapse duplicate SessionStart HUI hooks to one' });
-    if (managedCount(ups) > 1) plan.actions.push({ kind: 'deduplicateUserPromptSubmit', count: managedCount(ups), detail: 'Collapse duplicate UserPromptSubmit HUI hooks to one' });
-    const sl = settings.statusLine;
-    if (sl && typeof sl.command === 'string' && /hui-statusline/.test(sl.command) && !fs.existsSync(sl.command.replace(/.*hui-statusline\S*/, m => m))) {
-      plan.actions.push({ kind: 'fixStatusline', detail: 'Statusline command references a missing hui-statusline script' });
+    const deduplicated = SETTINGS.deduplicateManagedHooks(candidate);
+    if (deduplicated > 0) {
+      plan.actions.push({ kind: 'deduplicateManagedHooks', count: deduplicated, detail: 'Collapse duplicate HUI hook registrations' });
+    }
+    const statuslineCommand = candidate.statusLine && typeof candidate.statusLine.command === 'string'
+      ? candidate.statusLine.command : '';
+    if (statuslineCommand && /hui-statusline/.test(statuslineCommand)) {
+      const targetMatch = statuslineCommand.match(/"([^"]*hui-statusline(?:\.sh|\.ps1))"|(\S*hui-statusline(?:\.sh|\.ps1))/);
+      const target = targetMatch && (targetMatch[1] || targetMatch[2]);
+      if (target && !fs.existsSync(target)) plan.actions.push({ kind: 'fixStatusline', detail: 'Remove statusline command referencing a missing HUI script' });
     }
   }
 
   const flagPath = path.join(configDir, '.hui-active');
   if (fs.existsSync(flagPath)) plan.actions.push({ kind: 'keepActiveFlag', detail: `Active flag present (mode: ${fs.readFileSync(flagPath, 'utf8').trim()}); no change needed` });
-
-  plan.writable = plan.actions.some(a => a.kind.startsWith('prune') || a.kind.startsWith('deduplicate') || a.kind === 'fixStatusline');
+  plan.writable = plan.actions.some(a => a.kind !== 'keepActiveFlag');
 
   if (opts.json) {
     process.stdout.write(JSON.stringify(plan, null, 2) + '\n');
@@ -1414,20 +1443,24 @@ function migrateFromHui(opts, configDir) {
     process.stdout.write(`${PRODUCT_NAME} migrate-from-hui (dry-run${opts.force ? ' + --force' : ''})\n`);
     process.stdout.write(`  config dir: ${configDir}\n`);
     process.stdout.write(`  settings readable: ${plan.settingsReadable}\n`);
-    if (!plan.actions.length) {
-      process.stdout.write('  no migration actions needed — install is clean\n');
-    } else {
+    if (!plan.actions.length) process.stdout.write('  no migration actions needed — install is clean\n');
+    else {
       process.stdout.write(`  actions (${plan.actions.length}):\n`);
       for (const a of plan.actions) process.stdout.write(`    • ${a.kind}${a.count ? ` (×${a.count})` : ''}: ${a.detail}\n`);
       if (plan.writable && !opts.force) process.stdout.write('\n  re-run with --force to apply writeable actions\n');
-      if (opts.force && plan.writable) process.stdout.write('\n  applying writable actions now\n');
     }
   }
 
-  if (opts.force && plan.writable && settings) {
-    const pruned = SETTINGS.pruneOrphanedManagedHooks(settings, configDir);
-    if (pruned) SETTINGS.validateHookFields(settings);
-    if (!opts.dryRun) SETTINGS.writeSettings(settingsPath, settings);
+  if (opts.force && plan.writable && settings && !opts.dryRun) {
+    SETTINGS.pruneOrphanedManagedHooks(settings, configDir);
+    SETTINGS.deduplicateManagedHooks(settings);
+    if (settings.statusLine && typeof settings.statusLine.command === 'string' && /hui-statusline/.test(settings.statusLine.command)) {
+      const tokens = settings.statusLine.command.match(/"([^"]*hui-statusline(?:\.sh|\.ps1))"|(\S*hui-statusline(?:\.sh|\.ps1))/);
+      const target = tokens && (tokens[1] || tokens[2]);
+      if (target && !fs.existsSync(target)) delete settings.statusLine;
+    }
+    SETTINGS.validateHookFields(settings);
+    SETTINGS.writeSettings(settingsPath, settings);
     process.stdout.write('  applied: settings.json cleaned\n');
   }
   return plan.writable && !opts.force ? 1 : 0;
@@ -1566,6 +1599,7 @@ FLAGS
                         plugin layout. Read-only dry-run unless paired with
                         --force; never overwrites user-authored settings/rules.
   --json                With --doctor or --list, emit machine-readable JSON.
+                        --list --json includes provider capability metadata.
   --config-dir <path>   Claude Code config dir for hook files + settings.json.
                         Default: \$CLAUDE_CONFIG_DIR or ~/.claude. Does NOT
                         scope \`claude plugin install\`, \`gemini extensions
@@ -1591,7 +1625,7 @@ async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const c = makeChalk(opts.noColor);
   if (opts.help) { printHelp(); return 0; }
-  if (opts.listOnly) { printList(opts.noColor); return 0; }
+  if (opts.listOnly) { printList(opts.noColor, opts.json); return 0; }
 
   checkWslWindowsNode();
   checkNodeVersion();
@@ -1694,7 +1728,7 @@ async function main() {
   }
   process.stdout.write('\n');
   ctx.note("  start any session and say 'hui mode', or run /hui in Claude Code");
-  ctx.note('  measure what hui save you: run /hui-stats (numbers are estimates)');
+  ctx.note('  inspect observed local session usage: run /hui-stats');
   ctx.note(`  uninstall: npx -y ${NPM_PACKAGE_NAME} -- --uninstall`);
 
   // Exit code: nonzero only if every detected agent failed

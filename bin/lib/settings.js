@@ -242,6 +242,29 @@ function removeHuiHooks(settings) {
   return removed;
 }
 
+function deduplicateManagedHooks(settings) {
+  if (!settings || !settings.hooks || typeof settings.hooks !== 'object') return 0;
+  let removed = 0;
+  for (const event of Object.keys(settings.hooks)) {
+    const entries = settings.hooks[event];
+    if (!Array.isArray(entries)) continue;
+    const seen = new Set();
+    settings.hooks[event] = entries.filter(entry => {
+      if (!entry || !Array.isArray(entry.hooks)) return true;
+      const managed = entry.hooks.filter(h => h && typeof h.command === 'string' &&
+        tokenizeCommand(h.command).some(tok => MANAGED_HOOK_BASENAMES.has(path.win32.basename(tok))));
+      if (managed.length === 0) return true;
+      const key = managed.map(h => path.win32.basename(tokenizeCommand(h.command).find(tok => MANAGED_HOOK_BASENAMES.has(path.win32.basename(tok))) || h.command)).sort().join('|');
+      if (seen.has(key)) { removed++; return false; }
+      seen.add(key);
+      return true;
+    });
+    if (settings.hooks[event].length === 0) delete settings.hooks[event];
+  }
+  if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
+  return removed;
+}
+
 // ── rewriteLegacyManagedHookCommands ──────────────────────────────────────
 // Walk every hook command. If it's a bare `node /path/to/<managed>.js` (no
 // absolute node path) and the basename is one of ours, rewrite to use
@@ -354,6 +377,7 @@ module.exports = {
   hasHuiHook,
   addCommandHook,
   removeHuiHooks,
+  deduplicateManagedHooks,
   rewriteLegacyManagedHookCommands,
   pruneOrphanedManagedHooks,
   claudeConfigDir,

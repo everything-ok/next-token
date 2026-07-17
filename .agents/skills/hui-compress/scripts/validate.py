@@ -6,11 +6,13 @@ from pathlib import Path
 URL_REGEX = re.compile(r"https?://[^\s)]+")
 FENCE_OPEN_REGEX = re.compile(r"^(\s{0,3})(`{3,}|~{3,})(.*)$")
 HEADING_REGEX = re.compile(r"^(#{1,6})\s+(.*)", re.MULTILINE)
-BULLET_REGEX = re.compile(r"^\s*[-*+]\s+", re.MULTILINE)
-
-# crude but effective path detection
-# Requires either a path prefix (./ ../ / or drive letter) or a slash/backslash within the match
-PATH_REGEX = re.compile(r"(?:\./|\.\./|/|[A-Za-z]:\\)[\w\-/\\\.]+|[\w\-\.]+[/\\][\w\-/\\\.]+")
+BULLET_REGEX = re.compile(r"^(\s*)([-*+])\s+", re.MULTILINE)
+ORDERED_LIST_REGEX = re.compile(r"^(\s*)\d+[.)]\s+", re.MULTILINE)
+TABLE_ROW_REGEX = re.compile(r"^\s*\|?.*\|.*\|\s*$", re.MULTILINE)
+MARKDOWN_LINK_REGEX = re.compile(r"!?\[[^\]]*\]\([^)]*\)")
+ENV_VAR_REGEX = re.compile(r"(?<![\w$])\$?[A-Z][A-Z0-9_]{1,}")
+PATH_REGEX = re.compile(r"(?:\./|\.\./|/|[A-Za-z]:\\)[\w\-/\\.]+|[\w\-.]+[/\\][\w\-/\\.]+")
+FRONTMATTER_REGEX = re.compile(r"\A---\r?\n.*?\r?\n---\r?\n", re.DOTALL)
 
 
 class ValidationResult:
@@ -31,183 +33,166 @@ def read_file(path: Path) -> str:
     return path.read_text(errors="ignore")
 
 
-# ---------- Extractors ----------
-
-
 def extract_headings(text):
     return [(level, title.strip()) for level, title in HEADING_REGEX.findall(text)]
 
 
-def extract_code_blocks(text):
-    """Line-based fenced code block extractor.
+def extract_frontmatter(text):
+    match = FRONTMATTER_REGEX.match(text)
+    return match.group(0) if match else ""
 
-    Handles ``` and ~~~ fences with variable length (CommonMark: closing
-    fence must use same char and be at least as long as opening). Supports
-    nested fences (e.g. an outer 4-backtick block wrapping inner 3-backtick
-    content).
-    """
+
+def extract_code_blocks(text):
+    """Extract closed fenced blocks exactly, including their fence lines."""
     blocks = []
     lines = text.split("\n")
     i = 0
-    n = len(lines)
-    while i < n:
-        m = FENCE_OPEN_REGEX.match(lines[i])
-        if not m:
+    while i < len(lines):
+        match = FENCE_OPEN_REGEX.match(lines[i])
+        if not match:
             i += 1
             continue
-        fence_char = m.group(2)[0]
-        fence_len = len(m.group(2))
-        open_line = lines[i]
-        block_lines = [open_line]
+        fence_char, fence_len = match.group(2)[0], len(match.group(2))
+        block = [lines[i]]
         i += 1
-        closed = False
-        while i < n:
-            close_m = FENCE_OPEN_REGEX.match(lines[i])
-            if (
-                close_m
-                and close_m.group(2)[0] == fence_char
-                and len(close_m.group(2)) >= fence_len
-                and close_m.group(3).strip() == ""
-            ):
-                block_lines.append(lines[i])
-                closed = True
-                i += 1
-                break
-            block_lines.append(lines[i])
+        while i < len(lines):
+            close = FENCE_OPEN_REGEX.match(lines[i])
+            block.append(lines[i])
             i += 1
-        if closed:
-            blocks.append("\n".join(block_lines))
-        # Unclosed fences are silently skipped — they indicate malformed markdown
-        # and including them would cause false-positive validation failures.
+            if (close and close.group(2)[0] == fence_char and
+                    len(close.group(2)) >= fence_len and not close.group(3).strip()):
+                blocks.append("\n".join(block))
+                break
     return blocks
 
 
+def text_outside_fences(text):
+    """Blank fenced regions while retaining line positions for other extractors."""
+    lines = text.splitlines(keepends=True)
+    output, fence = [], None
+    for line in lines:
+        match = FENCE_OPEN_REGEX.match(line.rstrip("\r\n"))
+        if fence is None and match:
+            fence = (match.group(2)[0], len(match.group(2)))
+            output.append("\n" if line.endswith("\n") else "")
+        elif fence is not None:
+            output.append("\n" if line.endswith("\n") else "")
+            if (match and match.group(2)[0] == fence[0] and
+                    len(match.group(2)) >= fence[1] and not match.group(3).strip()):
+                fence = None
+        else:
+            output.append(line)
+    return "".join(output)
+
+
 def extract_urls(text):
-    return set(URL_REGEX.findall(text))
+    return Counter(URL_REGEX.findall(text_outside_fences(text)))
 
 
 def extract_paths(text):
-    return set(PATH_REGEX.findall(text))
+    return Counter(PATH_REGEX.findall(text_outside_fences(text)))
 
 
-def count_bullets(text):
-    return len(BULLET_REGEX.findall(text))
+def extract_markdown_links(text):
+    return Counter(MARKDOWN_LINK_REGEX.findall(text_outside_fences(text)))
+
+
+def extract_env_vars(text):
+    return Counter(ENV_VAR_REGEX.findall(text_outside_fences(text)))
 
 
 def extract_inline_codes(text):
-    text_without_fences = re.sub(r"^```[\s\S]*?^```", "", text, flags=re.MULTILINE)
-    text_without_fences = re.sub(r"^~~~[\s\S]*?^~~~", "", text_without_fences, flags=re.MULTILINE)
-    return re.findall(r"`([^`]+)`", text_without_fences)
+    text = text_outside_fences(text)
+    # Backtick runs may contain a single backtick; match the same delimiter length.
+    return re.findall(r"(?<!`)`([^`]+)`(?!`)", text)
 
 
-# ---------- Validators ----------
+def list_structure(text):
+    outside = text_outside_fences(text)
+    bullets = [(len(indent.expandtabs(4)), marker) for indent, marker in BULLET_REGEX.findall(outside)]
+    ordered = [len(indent.expandtabs(4)) for indent in ORDERED_LIST_REGEX.findall(outside)]
+    tables = [line.count("|") for line in outside.splitlines() if TABLE_ROW_REGEX.match(line)]
+    return bullets, ordered, tables
+
+
+def _require_equal(label, original, compressed, result):
+    if original != compressed:
+        result.add_error(f"{label} not preserved exactly")
 
 
 def validate_headings(orig, comp, result):
-    h1 = extract_headings(orig)
-    h2 = extract_headings(comp)
-
-    if len(h1) != len(h2):
-        result.add_error(f"Heading count mismatch: {len(h1)} vs {len(h2)}")
-
-    if h1 != h2:
-        result.add_warning("Heading text/order changed")
+    _require_equal("Headings", extract_headings(orig), extract_headings(comp), result)
 
 
 def validate_code_blocks(orig, comp, result):
-    c1 = extract_code_blocks(orig)
-    c2 = extract_code_blocks(comp)
+    _require_equal("Code blocks", extract_code_blocks(orig), extract_code_blocks(comp), result)
 
-    if c1 != c2:
-        result.add_error("Code blocks not preserved exactly")
+
+def validate_frontmatter(orig, comp, result):
+    _require_equal("YAML frontmatter", extract_frontmatter(orig), extract_frontmatter(comp), result)
 
 
 def validate_urls(orig, comp, result):
-    u1 = extract_urls(orig)
-    u2 = extract_urls(comp)
-
-    if u1 != u2:
-        result.add_error(f"URL mismatch: lost={u1 - u2}, added={u2 - u1}")
+    _require_equal("URLs", extract_urls(orig), extract_urls(comp), result)
 
 
 def validate_paths(orig, comp, result):
-    p1 = extract_paths(orig)
-    p2 = extract_paths(comp)
-
-    if p1 != p2:
-        result.add_warning(f"Path mismatch: lost={p1 - p2}, added={p2 - p1}")
+    _require_equal("File paths", extract_paths(orig), extract_paths(comp), result)
 
 
-def validate_bullets(orig, comp, result):
-    b1 = count_bullets(orig)
-    b2 = count_bullets(comp)
+def validate_markdown_links(orig, comp, result):
+    _require_equal("Markdown links", extract_markdown_links(orig), extract_markdown_links(comp), result)
 
-    if b1 == 0:
-        return
 
-    diff = abs(b1 - b2) / b1
-
-    if diff > 0.15:
-        result.add_warning(f"Bullet count changed too much: {b1} -> {b2}")
+def validate_env_vars(orig, comp, result):
+    _require_equal("Environment variables", extract_env_vars(orig), extract_env_vars(comp), result)
 
 
 def validate_inline_codes(orig, comp, result):
-    c1 = Counter(extract_inline_codes(orig))
-    c2 = Counter(extract_inline_codes(comp))
-
-    if c1 != c2:
-        lost = set(c1.keys()) - set(c2.keys())
-        added = set(c2.keys()) - set(c1.keys())
-        for code, count in c1.items():
-            if code in c2 and c2[code] < count:
-                lost.add(f"{code} (lost {count - c2[code]} of {count} occurrences)")
-        if lost:
-            result.add_error(f"Inline code lost: {lost}")
-        if added:
-            result.add_warning(f"Inline code added: {added}")
+    original, compressed = Counter(extract_inline_codes(orig)), Counter(extract_inline_codes(comp))
+    lost = {code: count - compressed[code] for code, count in original.items() if compressed[code] < count}
+    added = {code: count - original[code] for code, count in compressed.items() if original[code] < count}
+    if lost:
+        result.add_error(f"Inline code lost: {lost}")
+    if added:
+        result.add_warning(f"Inline code added: {added}")
 
 
-# ---------- Main ----------
+def validate_structure(orig, comp, result):
+    original_bullets, original_ordered, original_tables = list_structure(orig)
+    compressed_bullets, compressed_ordered, compressed_tables = list_structure(comp)
+    _require_equal("Bullet hierarchy", original_bullets, compressed_bullets, result)
+    _require_equal("Numbered-list hierarchy", original_ordered, compressed_ordered, result)
+    _require_equal("Table column structure", original_tables, compressed_tables, result)
 
 
-def validate(original_path: Path, compressed_path: Path) -> ValidationResult:
+def validate_text(original: str, compressed: str) -> ValidationResult:
     result = ValidationResult()
-
-    orig = read_file(original_path)
-    comp = read_file(compressed_path)
-
-    validate_headings(orig, comp, result)
-    validate_code_blocks(orig, comp, result)
-    validate_urls(orig, comp, result)
-    validate_paths(orig, comp, result)
-    validate_bullets(orig, comp, result)
-    validate_inline_codes(orig, comp, result)
-
+    validate_frontmatter(original, compressed, result)
+    validate_headings(original, compressed, result)
+    validate_code_blocks(original, compressed, result)
+    validate_urls(original, compressed, result)
+    validate_markdown_links(original, compressed, result)
+    validate_paths(original, compressed, result)
+    validate_env_vars(original, compressed, result)
+    validate_inline_codes(original, compressed, result)
+    validate_structure(original, compressed, result)
     return result
 
 
-# ---------- CLI ----------
+def validate(original_path: Path, compressed_path: Path) -> ValidationResult:
+    return validate_text(read_file(original_path), read_file(compressed_path))
+
 
 if __name__ == "__main__":
     import sys
-
     if len(sys.argv) != 3:
         print("Usage: python validate.py <original> <compressed>")
         sys.exit(1)
-
-    orig = Path(sys.argv[1]).resolve()
-    comp = Path(sys.argv[2]).resolve()
-
-    res = validate(orig, comp)
-
+    res = validate(Path(sys.argv[1]).resolve(), Path(sys.argv[2]).resolve())
     print(f"\nValid: {res.is_valid}")
-
-    if res.errors:
-        print("\nErrors:")
-        for e in res.errors:
-            print(f"  - {e}")
-
-    if res.warnings:
-        print("\nWarnings:")
-        for w in res.warnings:
-            print(f"  - {w}")
+    for label, items in (("Errors", res.errors), ("Warnings", res.warnings)):
+        if items:
+            print(f"\n{label}:")
+            for item in items:
+                print(f"  - {item}")

@@ -125,7 +125,7 @@ test('fresh install populates hooks dir and settings.json (skipped without `clau
     assert.match(getStatuslineCommand(settings), /hui-statusline/,
       'statusLine command does not reference hui');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -146,7 +146,7 @@ test('idempotent install does not duplicate hook entries (skipped without `claud
     const ups = huiHookCommands(settings, 'UserPromptSubmit', 'hui-mode-tracker');
     assert.equal(ups.length, 1, `expected 1 UserPromptSubmit hui hook, got ${ups.length}`);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -198,7 +198,7 @@ test('uninstall strips hui hooks but preserves user-authored ones (skipped witho
     assert.doesNotMatch(getStatuslineCommand(settings), /hui-statusline/,
       'hui statusline survived uninstall');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -232,7 +232,7 @@ test('install tolerates JSONC settings.json (comments + trailing commas)', { ski
     assert.ok(SETTINGS.hasHuiHook(parsed, 'SessionStart', 'hui-activate'));
     assert.ok(SETTINGS.hasHuiHook(parsed, 'UserPromptSubmit', 'hui-mode-tracker'));
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -277,7 +277,7 @@ test('openclaw install writes skill folder + SOUL.md bootstrap', () => {
     assert.match(soulRaw, /<!-- hui-end -->/, 'SOUL.md missing end marker');
     assert.match(soulRaw, /Respond terse like smart hui/, 'SOUL.md missing sentinel');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -302,7 +302,7 @@ test('openclaw install is idempotent: skill frontmatter not double-prepended, SO
     const beginMatches = soulRaw.match(/<!-- hui-begin -->/g) || [];
     assert.equal(beginMatches.length, 1, `expected 1 marker block after re-run, got ${beginMatches.length}`);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -322,7 +322,7 @@ test('openclaw install preserves user content in SOUL.md (append, not overwrite)
     assert.match(soulRaw, /foo bar baz/, 'user content wiped during install');
     assert.match(soulRaw, /<!-- hui-begin -->/, 'hui block not appended');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -351,7 +351,7 @@ test('openclaw uninstall removes skill folder + strips SOUL.md block, preserving
     assert.match(soulAfter, /# my workspace/, 'user heading wiped during uninstall');
     assert.match(soulAfter, /foo bar baz/, 'user content wiped during uninstall');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -371,7 +371,7 @@ test('hui-init.js --only openclaw routes through the same helper', () => {
     const soulRaw = fs.readFileSync(path.join(ws, 'SOUL.md'), 'utf8');
     assert.match(soulRaw, /Respond terse like smart hui/, 'sentinel missing via init route');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -397,7 +397,7 @@ test('lib settings.addCommandHook is idempotent across two synthetic install pas
     const round = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
     assert.equal(round.hooks.SessionStart.length, 1, 'addCommandHook duplicated entry');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -435,7 +435,7 @@ test('opencode: --force on legacy AGENTS.md preserves user content and takes a b
     assert.match(fs.readFileSync(agentsMd + '.bak', 'utf8'), /My precious user rules/,
       'backup does not contain the original content');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -465,7 +465,7 @@ test('openclaw: truncated begin marker does not eat user content (issue #596 cha
     assert.match(afterStrip, /USER IMPORTANT CONTENT/, 'user content deleted by strip — the #596 data loss');
     assert.doesNotMatch(afterStrip, /hui-begin/, 'marker survived strip');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -483,7 +483,7 @@ test('openclaw: strip removes multiple blocks pairwise, keeping user content bet
     assert.doesNotMatch(after, /hui-(begin|end)/, 'markers survived');
     assert.doesNotMatch(after, /rules v1/, 'block bodies survived');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -500,7 +500,7 @@ test('openclaw: orphan end marker stripped without touching content', () => {
     assert.match(after, /after/);
     assert.doesNotMatch(after, /hui-end/);
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -516,7 +516,7 @@ test('openclaw: append on a well-formed block stays a no-op', () => {
     assert.equal(again.changed, false);
     assert.equal(fs.readFileSync(soul, 'utf8'), first, 'no-op append must not modify the file');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });
 
@@ -551,6 +551,6 @@ test('missing claude CLI: reports failure and falls back to standalone hook wiri
     const settings = JSON.parse(fs.readFileSync(path.join(configDir, 'settings.json'), 'utf8'));
     assert.ok(settings.hooks && settings.hooks.SessionStart, 'SessionStart hook not wired');
   } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
 });

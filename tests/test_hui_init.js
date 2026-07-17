@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const assert = require('assert');
-const { execFileSync } = require('child_process');
+const { execFileSync, spawnSync } = require('child_process');
 
 const ROOT = path.resolve(__dirname, '..');
 const INIT = path.join(ROOT, 'src', 'tools', 'hui-init.js');
@@ -19,6 +19,13 @@ let failed = 0;
 // the developer's real ~/.openclaw/workspace.
 function runInit(tmp, ...args) {
   return execFileSync(process.execPath, [INIT, tmp, ...args], {
+    encoding: 'utf8',
+    env: { ...process.env, OPENCLAW_WORKSPACE: path.join(tmp, 'no-openclaw') },
+  });
+}
+
+function runInitResult(tmp, ...args) {
+  return spawnSync(process.execPath, [INIT, tmp, ...args], {
     encoding: 'utf8',
     env: { ...process.env, OPENCLAW_WORKSPACE: path.join(tmp, 'no-openclaw') },
   });
@@ -120,6 +127,64 @@ test('detects sentinel and skips files that already have hui content', (tmp) => 
     '# Existing\n\nRespond terse like smart hui. Hello.\n');
   const out = runInit(tmp, '--only', 'cline');
   assert.match(out, /skipped-already-installed/);
+});
+
+test('--check-conflicts is non-mutating and exits zero without conflicts', (tmp) => {
+  const result = runInitResult(tmp, '--check-conflicts');
+  assert.strictEqual(result.status, 0);
+  assert.match(result.stdout, /No managed rule conflicts found/);
+  assert.deepStrictEqual(fs.readdirSync(tmp), []);
+});
+
+test('--check-conflicts reports unmanaged managed-target files deterministically', (tmp) => {
+  fs.mkdirSync(path.join(tmp, '.cursor/rules'), { recursive: true });
+  fs.mkdirSync(path.join(tmp, '.clinerules'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, '.cursor/rules/hui.mdc'), '# project cursor rule\n');
+  fs.writeFileSync(path.join(tmp, '.clinerules/hui.md'), '# project cline rule\n');
+
+  const result = runInitResult(tmp, '--check-conflicts');
+  assert.strictEqual(result.status, 1);
+  assert.match(result.stdout, /Found 2 managed rule conflict\(s\)/);
+  assert.ok(result.stdout.indexOf('.clinerules/hui.md') < result.stdout.indexOf('.cursor/rules/hui.mdc'));
+  assert.strictEqual(fs.readFileSync(path.join(tmp, '.cursor/rules/hui.mdc'), 'utf8'), '# project cursor rule\n');
+  assert.strictEqual(fs.readFileSync(path.join(tmp, '.clinerules/hui.md'), 'utf8'), '# project cline rule\n');
+});
+
+test('--check-conflicts --json emits a stable machine-readable report', (tmp) => {
+  fs.mkdirSync(path.join(tmp, '.github'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, '.github/copilot-instructions.md'), '# project instructions\n');
+
+  const result = runInitResult(tmp, '--check-conflicts', '--json');
+  assert.strictEqual(result.status, 1);
+  const report = JSON.parse(result.stdout);
+  assert.deepStrictEqual(report, {
+    status: 'conflicts-found',
+    target: path.resolve(tmp),
+    checked: [
+      '.clinerules/hui.md',
+      '.cursor/rules/hui.mdc',
+      '.github/copilot-instructions.md',
+      '.opencode/AGENTS.md',
+      '.windsurf/rules/hui.md',
+      'AGENTS.md',
+    ],
+    conflicts: [{
+      agent: 'copilot',
+      path: '.github/copilot-instructions.md',
+      reason: 'existing-rule-without-hui-sentinel',
+    }],
+  });
+});
+
+test('--check-conflicts ignores HUI-owned targets and respects --only', (tmp) => {
+  fs.mkdirSync(path.join(tmp, '.cursor/rules'), { recursive: true });
+  fs.mkdirSync(path.join(tmp, '.clinerules'), { recursive: true });
+  fs.writeFileSync(path.join(tmp, '.cursor/rules/hui.mdc'), 'Respond terse like smart hui\n');
+  fs.writeFileSync(path.join(tmp, '.clinerules/hui.md'), '# project cline rule\n');
+
+  const result = runInitResult(tmp, '--check-conflicts', '--only', 'cursor', '--json');
+  assert.strictEqual(result.status, 0);
+  assert.deepStrictEqual(JSON.parse(result.stdout).conflicts, []);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

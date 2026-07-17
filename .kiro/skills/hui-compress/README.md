@@ -1,85 +1,56 @@
-<p align="center">
-  <img src="https://em-content.zobj.net/source/apple/391/rock_1faa8.png" width="80" />
-</p>
+# hui-compress
 
-<h1 align="center">hui-compress</h1>
+Rewrite supported natural-language files into concise HUI-style prose.
 
-<p align="center">
-  <strong>shrink memory file. save token every session.</strong>
-</p>
-
----
-
-A Claude Code skill that compresses your project memory files (`CLAUDE.md`, todos, preferences) into hui format — so every session loads fewer tokens automatically.
-
-Claude read `CLAUDE.md` on every session start. If file big, cost big. Hui make file small. Cost go down forever.
-
-## What It Do
+## What it does
 
 ```
 /hui-compress CLAUDE.md
 ```
 
 ```
-CLAUDE.md          ← compressed (Claude reads this — fewer tokens every session)
-CLAUDE.original.md ← human-readable backup (you edit this)
+CLAUDE.md          ← rewritten copy
+CLAUDE.original.md ← human-readable backup
 ```
 
-Original never lost. You can read and edit `.original.md`. Run skill again to re-compress after edits.
+Original content remains in `.original.md`. Edit backup, then run skill again when needed.
 
-## Benchmarks
+`hui-compress` is a text transformation tool. It does not promise token, cost, latency, or accuracy results.
 
-Real results on real project files:
+## Safety and validation
 
-| File | Original | Compressed | Saved |
-|------|----------:|----------:|------:|
-| `claude-md-preferences.md` | 706 | 285 | **59.6%** |
-| `project-notes.md` | 1145 | 535 | **53.3%** |
-| `claude-md-project.md` | 1122 | 636 | **43.3%** |
-| `todo-list.md` | 627 | 388 | **38.1%** |
-| `mixed-with-code.md` | 888 | 560 | **36.9%** |
-| **Average** | **898** | **481** | **46%** |
+The tool only accepts supported natural-language files. It preserves and validates:
 
-All validations passed ✅ — headings, code blocks, URLs, file paths preserved exactly.
+- Code blocks and inline code
+- URLs, links, file paths, and commands
+- Technical terms, library names, and API names
+- Headings, dates, version numbers, and numeric values
+- Table structure
 
-## Before / After
+Workflow:
 
-<table>
-<tr>
-<td width="50%">
-
-### 📄 Original (706 tokens)
-
-> "I strongly prefer TypeScript with strict mode enabled for all new code. Please don't use `any` type unless there's genuinely no way around it, and if you do, leave a comment explaining the reasoning. I find that taking the time to properly type things catches a lot of bugs before they ever make it to runtime."
-
-</td>
-<td width="50%">
-
-### <img src="../../docs/assets/dancing-rock.svg" width="20" height="20" alt="rock"/> Hui (285 tokens)
-
-> "Prefer TypeScript strict mode always. No `any` unless unavoidable — comment why if used. Proper types catch bugs early."
-
-</td>
-</tr>
-</table>
-
-**Same instructions. 60% fewer tokens. Every. Single. Session.**
-
-## Security
-
-`hui-compress` is flagged as Snyk High Risk due to subprocess and file I/O patterns detected by static analysis. This is a false positive — see [SECURITY.md](./SECURITY.md) for a full explanation of what the skill does and does not do.
-
-## Install
-
-Compress is built in with the `hui` plugin. Install `hui` once, then use `/hui-compress`.
-
-If you need local files, the compress skill lives at:
-
-```bash
-hui-compress/
+```
+/hui-compress CLAUDE.md
+        ↓
+detect file type
+        ↓
+rewrite natural-language content
+        ↓
+validate headings, code blocks, URLs, paths, and bullets
+        ↓
+patch validated issues only; retry up to two times
+        ↓
+write rewritten file and original backup
 ```
 
-**Requires:** Python 3.10+
+## Supported files
+
+| Type | Supported? |
+|------|------------|
+| `.md`, `.txt`, `.rst`, `.typ`, `.typst`, `.tex` | Yes |
+| Extensionless natural language | Yes |
+| `.py`, `.js`, `.ts`, `.json`, `.yaml` | No — code/config |
+| `*.original.md` | No — backup |
 
 ## Usage
 
@@ -88,76 +59,24 @@ hui-compress/
 ```
 
 Examples:
+
 ```
 /hui-compress CLAUDE.md
 /hui-compress docs/preferences.md
 /hui-compress todos.md
 ```
 
-### What files work
+## Security
 
-| Type | Compress? |
-|------|-----------|
-| `.md`, `.txt`, `.rst`, `.typ`, `.typst`, `.tex` | ✅ Yes |
-| Extensionless natural language | ✅ Yes |
-| `.py`, `.js`, `.ts`, `.json`, `.yaml` | ❌ Skip (code/config) |
-| `*.original.md` | ❌ Skip (backup files) |
+The skill performs file I/O and invokes local tooling to rewrite and validate requested files. See [SECURITY.md](./SECURITY.md) for boundaries and safeguards.
 
-## How It Work
+## Install
 
-```
-/hui-compress CLAUDE.md
-        ↓
-detect file type        (no tokens)
-        ↓
-Claude compresses       (tokens — one call)
-        ↓
-validate output         (no tokens)
-  checks: headings, code blocks, URLs, file paths, bullets
-        ↓
-if errors: Claude fixes cherry-picked issues only   (tokens — targeted fix)
-  does NOT recompress — only patches broken parts
-        ↓
-retry up to 2 times
-        ↓
-write compressed → CLAUDE.md
-write original   → CLAUDE.original.md
-```
+Compress ships with HUI. Install once, then use `/hui-compress`.
 
-Only two things use tokens: initial compression + targeted fix if validation fails. Everything else is local Python.
+Requires Python 3.10+.
 
-## What Is Preserved
+## Part of HUI
 
-Hui compress natural language. It never touch:
-
-- Code blocks (` ``` ` fenced or indented)
-- Inline code (`` `backtick content` ``)
-- URLs and links
-- File paths (`/src/components/...`)
-- Commands (`npm install`, `git commit`)
-- Technical terms, library names, API names
-- Headings (exact text preserved)
-- Tables (structure preserved, cell text compressed)
-- Dates, version numbers, numeric values
-
-## Why This Matter
-
-`CLAUDE.md` loads on **every session start**. A 1000-token project memory file costs tokens every single time you open a project. Over 100 sessions that's 100,000 tokens of overhead — just for context you already wrote.
-
-Hui cut that by ~46% on average. Same instructions. Same accuracy. Less waste.
-
-```
-┌────────────────────────────────────────────┐
-│  TOKEN SAVINGS PER FILE    █████       46% │
-│  SESSIONS THAT BENEFIT     ██████████ 100% │
-│  INFORMATION PRESERVED     ██████████ 100% │
-│  SETUP TIME                █            1x │
-└────────────────────────────────────────────┘
-```
-
-## Part of Hui
-
-This skill is part of the [hui](https://github.com/2454760302hui/next-token) toolkit — making Claude use fewer tokens without losing accuracy.
-
-- **hui** — make Claude *speak* like hui (cuts response tokens ~65%)
-- **hui-compress** — make Claude *read* less (cuts context tokens ~46%)
+- **hui** — concise technical communication modes
+- **hui-compress** — validated local natural-language file rewriting

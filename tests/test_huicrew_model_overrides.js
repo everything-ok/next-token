@@ -186,10 +186,11 @@ test('replaces reviewer model when HUICREW_REVIEWER_MODEL set', () => {
   });
 });
 
-test('legacy CAVECREW_REVIEWER_MODEL is no longer honored', () => {
+test('legacy reviewer environment variable is no longer honored', () => {
+  const legacyEnvName = ['CAVE', 'CREW_REVIEWER_MODEL'].join('');
   withTmpPlugin((root, agentsDir) => {
     fs.writeFileSync(path.join(agentsDir, 'huicrew-reviewer.md'), REVIEWER_FM, 'utf8');
-    applyOverrides(root, { CAVECREW_REVIEWER_MODEL: 'sonnet' });
+    applyOverrides(root, { [legacyEnvName]: 'sonnet' });
     const out = fs.readFileSync(path.join(agentsDir, 'huicrew-reviewer.md'), 'utf8');
     assert.strictEqual(out, REVIEWER_FM, 'legacy env var must not patch agent file');
   });

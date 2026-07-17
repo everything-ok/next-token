@@ -42,7 +42,7 @@ jobs:
           REF: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          base="https://raw.githubusercontent.com/2454760302hui/next-token/${REF}/src/hooks"
+          base="https://raw.githubusercontent.com/HUI/next-token/${REF}/src/hooks"
           curl --fail-with-body --retry 3 --retry-all-errors -sSLO "${base}/checksums.sha256"
           while read -r digest name; do
             curl --fail-with-body --retry 3 --retry-all-errors -sS "${base}/${name}" | sha256sum -c - <<<"${digest}  -"
@@ -52,6 +52,6 @@ jobs:
           REF: ${{ github.ref_name }}
         run: |
           set -euo pipefail
-          base="https://raw.githubusercontent.com/2454760302hui/next-token/${REF}"
+          base="https://raw.githubusercontent.com/HUI/next-token/${REF}"
           curl --fail-with-body --retry 3 --retry-all-errors -sS "${base}/install.sh" | grep -F 'next-token'
           curl --fail-with-body --retry 3 --retry-all-errors -sS "${base}/install.ps1" | grep -F 'next-token'
