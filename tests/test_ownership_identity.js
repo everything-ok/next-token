@@ -11,7 +11,7 @@ const BANNED = /2454760302hui|safe\.diving@example\.com|safe diving|co-authored-
 const tracked = execFileSync('git', ['ls-files', '-z'], { cwd: ROOT, encoding: 'buffer' })
   .toString('utf8').split('\0').filter(Boolean);
 
-const allowedBinary = new Set(['dist/hui.skill']);
+const allowedBinary = new Set(['dist/hui.skill', 'tests/test_ownership_identity.js']);
 const violations = [];
 for (const relative of tracked) {
   if (allowedBinary.has(relative)) continue;

@@ -32,13 +32,11 @@ const {
 } = require('./lib/brand');
 
 const REPO = REPOSITORY;
-// Pin remote fetches to an immutable release tag, not the moving `main`
-// branch (issue #261). A push to main must never silently change what a
-// curl|bash / detached-script install downloads and executes. Bump this to
-// the new tag on every release (CI release step) AFTER regenerating
-// src/hooks/checksums.sha256 so the integrity manifest matches the ref.
-// Overridable via HUI_REF for testing against a branch.
-const PINNED_REF = process.env.HUI_REF || 'v0.1.0';
+const PACKAGE_VERSION = require('../package.json').version;
+// Pin remote fetches to immutable release tag derived from installed package
+// version, never moving `main`. HUI_REF stays available for test and branch
+// overrides. This keeps next-token@X.Y.Z bound to vX.Y.Z assets.
+const PINNED_REF = process.env.HUI_REF || `v${PACKAGE_VERSION}`;
 const RAW_BASE = `https://raw.githubusercontent.com/${REPO}/${PINNED_REF}`;
 const HOOKS_REMOTE = `${RAW_BASE}/src/hooks`;
 const INIT_SCRIPT_URL = `${RAW_BASE}/src/tools/hui-init.js`;

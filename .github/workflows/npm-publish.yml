@@ -1,0 +1,48 @@
+name: Publish npm package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    if: github.event.release.prerelease == false
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Verify release version
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          expected="v$(node -p \"require('./package.json').version\")"
+          test "$RELEASE_TAG" = "$expected"
+      - name: Validate release artifact
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          npm run check-assets
+          npm run release:preflight
+          npm test
+          npm publish --dry-run --access public
+      - name: Publish with npm trusted publishing
+        run: npm publish --access public --provenance
+      - name: Smoke-test published package
+        env:
+          PACKAGE_VERSION: ${{ github.event.release.tag_name }}
+        run: |
+          version="${PACKAGE_VERSION#v}"
+          mkdir smoke
+          cd smoke
+          npx -y "next-token@${version}" -- --help
+          npx -y "next-token@${version}" -- --dry-run --all --non-interactive

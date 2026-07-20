@@ -156,6 +156,27 @@ real runs — never invent or round.
 
 ---
 
+## Release public npm package
+
+`next-token` publishes only from a published GitHub Release. Before creating release:
+
+```bash
+npm run check-assets
+npm run release:preflight
+npm test
+```
+
+Set `package.json` version, then create matching tag `v<version>`. Push tag and wait for release verification. Publish GitHub Release, approve protected `npm-publish` environment, then workflow publishes through npm Trusted Publishing with provenance. Do not add or use `NPM_TOKEN` in repository secrets or workflows.
+
+After publish, verify clean install:
+
+```bash
+npx -y next-token@<version> -- --help
+npx -y next-token@<version> -- --dry-run --all --non-interactive
+```
+
+---
+
 ## Pull-request guidelines
 
 - **Conventional Commits** for the commit subject. See `skills/hui-commit/SKILL.md` for the format we use here.

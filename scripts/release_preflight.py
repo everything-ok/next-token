@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 
@@ -15,12 +16,14 @@ INSTALLER = ROOT / "bin" / "install.js"
 def main() -> int:
     package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
     installer = INSTALLER.read_text(encoding="utf-8")
-    match = re.search(r"PINNED_REF = process\.env\.HUI_REF \|\| '([^']+)'", installer)
-    if not match:
-        raise RuntimeError("Could not locate default PINNED_REF")
     expected_ref = f"v{package['version']}"
-    if match.group(1) != expected_ref:
-        raise RuntimeError(f"PINNED_REF {match.group(1)} must equal package release tag {expected_ref}")
+    if "const PACKAGE_VERSION = require('../package.json').version;" not in installer:
+        raise RuntimeError("Installer must load PACKAGE_VERSION from package.json")
+    if "const PINNED_REF = process.env.HUI_REF || `v${PACKAGE_VERSION}`;" not in installer:
+        raise RuntimeError("Installer must derive PINNED_REF from PACKAGE_VERSION")
+    release_tag = os.environ.get("RELEASE_TAG")
+    if release_tag and release_tag != expected_ref:
+        raise RuntimeError(f"Release tag {release_tag} must equal package release tag {expected_ref}")
 
     manifest: dict[str, str] = {}
     for line in (HOOKS / "checksums.sha256").read_text(encoding="utf-8").splitlines():

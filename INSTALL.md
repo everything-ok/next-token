@@ -12,6 +12,22 @@ One installer supports listed AI coding agents. Installation and runtime capabil
 
 If just want it to work, run the one-liner. If want to know what gets touched, scroll down.
 
+## npm install
+
+```bash
+# Run latest public package without global install
+npx -y next-token -- --help
+
+# Install HUI command globally
+npm install -g next-token
+hui --help
+
+# Pin one immutable release
+npx -y next-token@<version> -- --dry-run --all
+```
+
+`next-token@<version>` fetches hook assets from matching immutable Git tag `v<version>` and verifies downloaded hook files against committed SHA-256 manifest. `npx -y next-token` follows npm `latest` tag.
+
 ## One-liner
 
 **macOS / Linux / WSL / Git Bash**

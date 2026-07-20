@@ -12,9 +12,19 @@ HUI makes AI coding-agent replies shorter while preserving technical substance.
 
 ## Install
 
+After first npm release, install with:
+
 ```bash
+# Run current public npm release without global install
 npx -y next-token -- --help
 npx -y next-token -- --dry-run --all
+
+# Install command globally
+npm install -g next-token
+hui --help
+
+# Pin exact release for reproducible installation
+npx -y next-token@<version> -- --dry-run --all
 ```
 
 After global installation, use brand command:

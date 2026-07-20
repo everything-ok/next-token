@@ -1,6 +1,6 @@
 {
   "name": "next-token",
-  "version": "0.1.0",
+  "version": "1.0.2",
   "description": "HUI installer — published on npm as next-token; installs HUI for AI coding agents.",
   "license": "MIT",
   "author": "HUI Contributors",
@@ -13,11 +13,14 @@
     "url": "https://github.com/HUI/next-token/issues"
   },
   "bin": {
-    "next-token": "./bin/install.js",
-    "hui": "./bin/install.js"
+    "next-token": "bin/install.js",
+    "hui": "bin/install.js"
   },
   "engines": {
     "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "hui",
@@ -41,6 +44,8 @@
     "src/",
     "agents/",
     "skills/",
+    "!skills/**/__pycache__/**",
+    "!skills/**/*.pyc",
     "plugins/",
     "commands/",
     "dist/hui.skill",

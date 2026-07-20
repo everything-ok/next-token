@@ -18,8 +18,11 @@ jobs:
         with:
           node-version: 20
       - name: Verify local release contract
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           npm run check-assets
+          npm run release:preflight
           npm run test:package
           HUI_REF="${{ github.ref_name }}" node bin/install.js --help
           python - <<'PY'

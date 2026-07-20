@@ -26,13 +26,18 @@ function run(args) {
 
 test('HUI product and next-token distribution contract', () => {
   assert.equal(PACKAGE.name, 'next-token');
-  assert.equal(PACKAGE.bin['next-token'], './bin/install.js');
-  assert.equal(PACKAGE.bin.hui, './bin/install.js');
+  assert.equal(PACKAGE.bin['next-token'], 'bin/install.js');
+  assert.equal(PACKAGE.bin.hui, 'bin/install.js');
   assert.match(PACKAGE.description, /HUI/i);
   assert.match(PACKAGE.description, /next-token/i);
   assert.equal(PACKAGE.homepage, `https://github.com/${REPOSITORY}`);
   assert.match(PACKAGE.repository.url, new RegExp(`${REPOSITORY.replace('/', '\\/')}`));
   assert.equal(PACKAGE.bugs.url, `https://github.com/${REPOSITORY}/issues`);
+  assert.equal(PACKAGE.publishConfig.access, 'public');
+  assert.equal(read('bin/lib/brand.js').match(/const REPOSITORY = '([^']+)'/)[1], REPOSITORY);
+  const installer = read('bin/install.js');
+  assert.match(installer, /const PACKAGE_VERSION = require\('\.\.\/package\.json'\)\.version;/);
+  assert.match(installer, /const PINNED_REF = process\.env\.HUI_REF \|\| `v\$\{PACKAGE_VERSION\}`;/);
 });
 
 test('installer help identifies HUI and next-token without npm hui claim', () => {
