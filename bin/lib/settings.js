@@ -22,6 +22,12 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
+// ── Cross-platform file mode helper ─────────────────────────────────────────
+// On Windows, fs.mkdirSync/chmod ignore mode bits for access control.
+// We set them anyway for Unix, and rely on filesystem ACLs on Windows.
+// For sensitive files (settings.json, manifests), prefer mode 0o600 on Unix.
+const IS_WIN = process.platform === 'win32';
+
 // ── stripJsonComments ──────────────────────────────────────────────────────
 // Hand-rolled state machine. Tracks string state + backslash escape so a
 // comment-looking sequence inside a quoted string is left alone. Removes
@@ -113,12 +119,18 @@ function readSettings(p) {
 }
 
 // ── writeSettings ──────────────────────────────────────────────────────────
-// Atomic write: temp file + rename. mode 0600 (settings often contains tokens).
+// Atomic write: temp file + rename. Sensible mode on Unix, graceful on Windows.
 function writeSettings(p, obj) {
   const dir = path.dirname(p);
   fs.mkdirSync(dir, { recursive: true });
   const tmp = path.join(dir, `.${path.basename(p)}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`);
-  fs.writeFileSync(tmp, JSON.stringify(obj, null, 2) + '\n', { mode: 0o600 });
+  const content = JSON.stringify(obj, null, 2) + '\n';
+  if (IS_WIN) {
+    // Windows: set restrictive ACL via icacls is too invasive; just write the file.
+    fs.writeFileSync(tmp, content);
+  } else {
+    fs.writeFileSync(tmp, content, { mode: 0o600 });
+  }
   fs.renameSync(tmp, p);
 }
 

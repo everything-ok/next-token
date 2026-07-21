@@ -189,7 +189,7 @@ function checkWslWindowsNode() {
       die('hui: detected Windows Node.js running inside WSL (/proc/version).\n' +
           '         Install Linux-native Node inside your WSL distro and re-run there.');
     }
-  } catch (_) { /* /proc/version absent on real Windows — fine */ }
+  } catch (_silent) { /* /proc/version absent on real Windows — fine */ }
 }
 
 function checkNodeVersion() {
@@ -278,7 +278,7 @@ function hasCmd(cmd) {
     }
     const r = child_process.spawnSync('sh', ['-c', `command -v ${shellEscape(cmd)}`], { stdio: 'ignore' });
     return r.status === 0;
-  } catch (_) { return false; }
+  } catch (_silent) { return false; }
 }
 
 function shellEscape(s) { return `'${String(s).replace(/'/g, `'\\''`)}'`; }
@@ -301,7 +301,7 @@ function vscodeExtPresent(needle) {
   for (const r of roots) {
     if (!fs.existsSync(r)) continue;
     let entries;
-    try { entries = fs.readdirSync(r); } catch (_) { continue; }
+    try { entries = fs.readdirSync(r); } catch (_silent) { continue; }
     if (entries.some(e => re.test(e))) return true;
   }
   return false;
@@ -311,7 +311,7 @@ function cursorExtPresent(needle) {
   const dir = path.join(os.homedir(), '.cursor/extensions');
   if (!fs.existsSync(dir)) return false;
   const re = new RegExp(needle, 'i');
-  try { return fs.readdirSync(dir).some(e => re.test(e)); } catch (_) { return false; }
+  try { return fs.readdirSync(dir).some(e => re.test(e)); } catch (_silent) { return false; }
 }
 
 function jetbrainsPresent() {
@@ -338,7 +338,7 @@ function walkDir(root, depth) {
   const out = [];
   if (depth < 0) return out;
   let entries;
-  try { entries = fs.readdirSync(root, { withFileTypes: true }); } catch (_) { return out; }
+  try { entries = fs.readdirSync(root, { withFileTypes: true }); } catch (_silent) { return out; }
   for (const e of entries) {
     const full = path.join(root, e.name);
     if (e.isDirectory()) { out.push(full); out.push(...walkDir(full, depth - 1)); }
@@ -380,7 +380,7 @@ function detectMatch(spec) {
 }
 
 function safeStat(p, method) {
-  try { return fs.statSync(p)[method](); } catch (_) { return false; }
+  try { return fs.statSync(p)[method](); } catch (_silent) { return false; }
 }
 
 // ── Repo root resolution ───────────────────────────────────────────────────
@@ -404,6 +404,23 @@ function detectRepoRoot() {
 // We pick (a) — simpler, fewer cross-version corner cases. The cost is that
 // args with spaces need quoting; we quote them defensively below.
 const IS_WIN = process.platform === 'win32';
+
+// Cross-platform safe file write. On Windows, chmod mode is ignored but setting
+// it gracefully fails without crashing. For sensitive files, prefer mode 0o600.
+function safeWriteFile(filePath, content, mode) {
+  const dir = path.dirname(filePath);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(filePath, content, { mode });
+}
+
+// Error suppression helpers. Silent swallows are for:
+//   - Optional operations where failure is expected/benign (file exists, no-op, etc.)
+//   - Operations where we have fallback behavior
+// Logging variant is for errors that should be visible but not fatal.
+const _noop = () => {};
+const _silent = (_err) => {};
+const _warn = (msg) => process.stderr.write(`hui: warning — ${msg}\n`);
+const _note = (msg) => process.stdout.write(`hui: note — ${msg}\n`);
 
 function quoteWinArg(a) {
   if (!IS_WIN) return a;
@@ -435,7 +452,7 @@ function runSpawn(cmd, args, opts, dry) {
 // on the same filesystem as ~/.claude/ avoids the cross-device link error.
 function sameFilesystemTmpEnv(configDir) {
   const tmpDir = path.join(configDir, 'tmp');
-  try { fs.mkdirSync(tmpDir, { recursive: true }); } catch (_) {}
+  try { fs.mkdirSync(tmpDir, { recursive: true }); } catch (_silent) {}
   return Object.assign({}, process.env, {
     TMPDIR: tmpDir,  // Unix
     TEMP: tmpDir,    // Windows
@@ -445,7 +462,7 @@ function sameFilesystemTmpEnv(configDir) {
 
 function captureSpawn(cmd, args) {
   try { return spawnXplat(cmd, args, { encoding: 'utf8' }); }
-  catch (_) { return { status: 1, stdout: '', stderr: '' }; }
+  catch (_silent) { return { status: 1, stdout: '', stderr: '' }; }
 }
 
 // spawnSync reports a missing binary as { status: null, error }, so the old
@@ -822,7 +839,7 @@ function installOpencode(ctx) {
           // in the backup).
           const agentsBak = agentsMd + '.bak';
           if (!fs.existsSync(agentsBak)) {
-            try { fs.copyFileSync(agentsMd, agentsBak); } catch (_) {}
+            try { fs.copyFileSync(agentsMd, agentsBak); } catch (_silent) {}
           }
           const bodyTrim = ruleBody.trimEnd();
           let userPart;
@@ -836,16 +853,16 @@ function installOpencode(ctx) {
             note(`  legacy block did not match the current ruleset — everything from the sentinel down was replaced; original kept at ${agentsBak}`);
           }
           const next = (userPart ? userPart + '\n\n' : '') + fencedBlock;
-          fs.writeFileSync(agentsMd, next, { mode: 0o644 });
+          safeWriteFile(agentsMd, next, 0o644);
           process.stdout.write(`  migrated ${agentsMd} legacy block to fenced (backup: ${agentsBak})\n`);
         }
       } else {
         const sep = existing.endsWith('\n\n') ? '' : (existing.endsWith('\n') ? '\n' : '\n\n');
-        fs.writeFileSync(agentsMd, existing + sep + fencedBlock, { mode: 0o644 });
+        safeWriteFile(agentsMd, existing + sep + fencedBlock, 0o644);
         process.stdout.write(`  appended hui ruleset to ${agentsMd}\n`);
       }
     } else {
-      fs.writeFileSync(agentsMd, fencedBlock, { mode: 0o644 });
+      safeWriteFile(agentsMd, fencedBlock, 0o644);
       process.stdout.write(`  installed: ${agentsMd}\n`);
     }
 
@@ -861,7 +878,7 @@ function installOpencode(ctx) {
     // otherwise overwrite the only known-good copy with an already-merged file.
     const opencodeBak = opencodeJson + '.bak';
     if (fs.existsSync(opencodeJson) && !fs.existsSync(opencodeBak)) {
-      try { fs.copyFileSync(opencodeJson, opencodeBak); } catch (_) {}
+      try { fs.copyFileSync(opencodeJson, opencodeBak); } catch (_silent) {}
     }
     if (!Array.isArray(cfg.plugin)) cfg.plugin = [];
     if (!cfg.plugin.includes(OPENCODE_PLUGIN_REL)) {
@@ -959,7 +976,7 @@ async function installHooks(ctx) {
         const want = checksums.get(f);
         const got = sha256File(dest);
         if (!want || want !== got) {
-          try { fs.unlinkSync(dest); } catch (_) {}
+          try { fs.unlinkSync(dest); } catch (_silent) {}
           return `integrity check failed for ${f} (expected ${want || '<not in manifest>'}, got ${got}) — ` +
                  `refusing to install a hook that doesn't match pinned release ${PINNED_REF}`;
         }
@@ -972,7 +989,7 @@ async function installHooks(ctx) {
   }
 
   // chmod statusline (no-op on Windows)
-  try { fs.chmodSync(path.join(hooksDir, 'hui-statusline.sh'), 0o755); } catch (_) {}
+  try { fs.chmodSync(path.join(hooksDir, 'hui-statusline.sh'), 0o755); } catch (_silent) {}
 
   // Merge into settings.json
   let settings = SETTINGS.readSettings(settingsPath);
@@ -985,7 +1002,7 @@ async function installHooks(ctx) {
   // the already-merged file, destroying recovery.
   const bak = settingsPath + '.bak';
   if (fs.existsSync(settingsPath) && !fs.existsSync(bak)) {
-    try { fs.copyFileSync(settingsPath, bak); } catch (_) {}
+    try { fs.copyFileSync(settingsPath, bak); } catch (_silent) {}
   }
 
   const node = absoluteNodePath();
@@ -1099,7 +1116,7 @@ async function runInit(ctx) {
     const tmp = path.join(os.tmpdir(), `hui-init-${process.pid}.js`);
     await downloadTo(INIT_SCRIPT_URL, tmp);
     const r = child_process.spawnSync(absoluteNodePath(), [tmp, ...args], { stdio: 'inherit' });
-    try { fs.unlinkSync(tmp); } catch (_) {}
+    try { fs.unlinkSync(tmp); } catch (_silent) {}
     return spawnOk(r);
   } catch (e) {
     warn('  ' + e.message);
@@ -1155,10 +1172,10 @@ async function loadRemoteHookChecksums() {
       if (m) map.set(path.basename(m[2].trim()), m[1].toLowerCase());
     }
     return map.size ? map : null;
-  } catch (_) {
+  } catch (_silent) {
     return null;
   } finally {
-    try { fs.unlinkSync(tmp); } catch (_) { /* best effort */ }
+    try { fs.unlinkSync(tmp); } catch (_silent) { /* best effort */ }
   }
 }
 
@@ -1250,21 +1267,21 @@ function uninstall(ctx) {
         ok(`  pruned hui entries from ${ocJson}`);
       }
     }
-    if (!opts.dryRun) { try { fs.rmSync(ocPluginDir, { recursive: true, force: true }); } catch (_) {} }
+    if (!opts.dryRun) { try { fs.rmSync(ocPluginDir, { recursive: true, force: true }); } catch (_silent) {} }
     note(`  removed ${ocPluginDir}`);
     // Commands, agents, skills — only files matching our manifest (don't
     // sweep the parent dirs; user may have other entries there).
     for (const f of OPENCODE_COMMAND_FILES) {
       const p = path.join(ocDir, 'commands', f);
-      if (fs.existsSync(p) && !opts.dryRun) { try { fs.unlinkSync(p); } catch (_) {} }
+      if (fs.existsSync(p) && !opts.dryRun) { try { fs.unlinkSync(p); } catch (_silent) {} }
     }
     for (const f of OPENCODE_AGENT_FILES) {
       const p = path.join(ocDir, 'agents', f);
-      if (fs.existsSync(p) && !opts.dryRun) { try { fs.unlinkSync(p); } catch (_) {} }
+      if (fs.existsSync(p) && !opts.dryRun) { try { fs.unlinkSync(p); } catch (_silent) {} }
     }
     for (const name of OPENCODE_SKILL_DIRS) {
       const p = path.join(ocDir, 'skills', name);
-      if (fs.existsSync(p) && !opts.dryRun) { try { fs.rmSync(p, { recursive: true, force: true }); } catch (_) {} }
+      if (fs.existsSync(p) && !opts.dryRun) { try { fs.rmSync(p, { recursive: true, force: true }); } catch (_silent) {} }
     }
     // AGENTS.md — strip the fenced hui block (preserves user content
     // above and below). If the file is empty after the strip, remove it.
@@ -1282,16 +1299,16 @@ function uninstall(ctx) {
         next = next ? next + '\n' : '';
         if (!opts.dryRun) {
           if (next === '') {
-            try { fs.unlinkSync(ocAgentsMd); } catch (_) {}
+            try { fs.unlinkSync(ocAgentsMd); } catch (_silent) {}
           } else {
-            fs.writeFileSync(ocAgentsMd, next, { mode: 0o644 });
+            safeWriteFile(ocAgentsMd, next, 0o644);
           }
         }
         note(next === '' ? `  removed ${ocAgentsMd}` : `  stripped hui block from ${ocAgentsMd}`);
       } else if (body.includes(OPENCODE_AGENTS_MD_SENTINEL)) {
         // Legacy install (no marker fence). Remove only if the file is ours.
         if (body.trim() === '' || body.trim().startsWith(OPENCODE_AGENTS_MD_SENTINEL)) {
-          if (!opts.dryRun) { try { fs.unlinkSync(ocAgentsMd); } catch (_) {} }
+          if (!opts.dryRun) { try { fs.unlinkSync(ocAgentsMd); } catch (_silent) {} }
           note(`  removed ${ocAgentsMd}`);
         } else {
           note(`  left ${ocAgentsMd} in place (legacy mixed content — strip hui block manually)`);
@@ -1300,7 +1317,7 @@ function uninstall(ctx) {
     }
     // opencode flag file
     const ocFlag = path.join(ocDir, '.hui-active');
-    if (fs.existsSync(ocFlag) && !opts.dryRun) { try { fs.unlinkSync(ocFlag); } catch (_) {} }
+    if (fs.existsSync(ocFlag) && !opts.dryRun) { try { fs.unlinkSync(ocFlag); } catch (_silent) {} }
   }
 
   // OpenClaw native install — strip skill folder + SOUL.md marker block.
@@ -1324,7 +1341,7 @@ function uninstall(ctx) {
     for (const name of HERMES_SKILL_DIRS) {
       const p = path.join(hermesRoot, name);
       if (fs.existsSync(p)) {
-        if (!opts.dryRun) { try { fs.rmSync(p, { recursive: true, force: true }); } catch (_) {} }
+        if (!opts.dryRun) { try { fs.rmSync(p, { recursive: true, force: true }); } catch (_silent) {} }
         note(`  removed ${p}`);
         prunedHermes = true;
       }
@@ -1334,7 +1351,7 @@ function uninstall(ctx) {
 
   // Flag file
   const flag = path.join(configDir, '.hui-active');
-  if (fs.existsSync(flag) && !opts.dryRun) { try { fs.unlinkSync(flag); } catch (_) {} }
+  if (fs.existsSync(flag) && !opts.dryRun) { try { fs.unlinkSync(flag); } catch (_silent) {} }
 
   process.stdout.write('\n');
   ok('uninstall done.');

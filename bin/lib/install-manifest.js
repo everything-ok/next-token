@@ -9,8 +9,12 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
+const IS_WIN = process.platform === 'win32';
 const MANIFEST_VERSION = 1;
 const MANIFEST_FILENAME = 'hui-install-manifest.json';
+
+// Error suppression helper for optional/best-effort operations.
+const _silent = (_err) => {};
 
 function manifestPath(configDir) {
   return path.join(configDir, MANIFEST_FILENAME);
@@ -31,7 +35,7 @@ function readManifest(configDir) {
     const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
     if (!parsed || parsed.version !== MANIFEST_VERSION || typeof parsed.targets !== 'object') return emptyManifest();
     return parsed;
-  } catch (_) {
+  } catch (_silent) {
     return emptyManifest();
   }
 }
@@ -40,7 +44,12 @@ function writeManifest(configDir, manifest) {
   fs.mkdirSync(configDir, { recursive: true });
   const file = manifestPath(configDir);
   const tmp = path.join(configDir, `.${MANIFEST_FILENAME}.${process.pid}.${crypto.randomBytes(4).toString('hex')}.tmp`);
-  fs.writeFileSync(tmp, JSON.stringify(manifest, null, 2) + '\n', { mode: 0o600 });
+  const content = JSON.stringify(manifest, null, 2) + '\n';
+  if (IS_WIN) {
+    fs.writeFileSync(tmp, content);
+  } else {
+    fs.writeFileSync(tmp, content, { mode: 0o600 });
+  }
   fs.renameSync(tmp, file);
 }
 
@@ -49,7 +58,7 @@ function recordTarget(configDir, target, files) {
   const entries = [];
   for (const filePath of files || []) {
     if (!filePath || !fs.existsSync(filePath)) continue;
-    try { entries.push({ path: path.resolve(filePath), sha256: sha256File(filePath) }); } catch (_) {}
+    try { entries.push({ path: path.resolve(filePath), sha256: sha256File(filePath) }); } catch (_silent) {}
   }
   manifest.targets[target] = { updatedAt: new Date().toISOString(), files: entries };
   writeManifest(configDir, manifest);
@@ -72,13 +81,13 @@ function removeTargetFiles(configDir, target, removeFile = fs.unlinkSync) {
       }
       removeFile(entry.path);
       result.removed.push(entry.path);
-    } catch (_) {
+    } catch (_silent) {
       result.preserved.push(entry.path);
     }
   }
   delete manifest.targets[target];
   if (Object.keys(manifest.targets).length === 0) {
-    try { fs.unlinkSync(manifestPath(configDir)); } catch (_) {}
+    try { fs.unlinkSync(manifestPath(configDir)); } catch (_silent) {}
   } else {
     writeManifest(configDir, manifest);
   }

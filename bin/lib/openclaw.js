@@ -26,11 +26,23 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const IS_WIN = process.platform === 'win32';
 const SKILL_NAME = 'hui';
 const SKILL_VERSION = '1.0.0';
 const MARK_BEGIN = '<!-- hui-begin -->';
 const MARK_END = '<!-- hui-end -->';
 const SOUL_FILE = 'SOUL.md';
+
+// Cross-platform safe file write. On Windows, chmod mode is ignored but setting
+// it gracefully fails without crashing.
+function safeWriteFile(filePath, content, mode) {
+  const dir = path.dirname(filePath);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(filePath, content, { mode });
+}
+
+// Error suppression helper for optional/best-effort operations.
+const _silent = (_err) => {};
 
 function resolveWorkspace(env = process.env) {
   if (env.OPENCLAW_WORKSPACE) return path.resolve(env.OPENCLAW_WORKSPACE);
@@ -38,7 +50,7 @@ function resolveWorkspace(env = process.env) {
 }
 
 function readIfExists(p) {
-  try { return fs.readFileSync(p, 'utf8'); } catch (_) { return null; }
+  try { return fs.readFileSync(p, 'utf8'); } catch (_silent) { return null; }
 }
 
 // ── Frontmatter helpers ───────────────────────────────────────────────────
@@ -176,7 +188,7 @@ function appendBootstrapToSoul(soulPath, snippet) {
   } else {
     next = snippet;
   }
-  fs.writeFileSync(soulPath, next, { mode: 0o644 });
+  safeWriteFile(soulPath, next, 0o644);
   return repaired ? { changed: true, repaired: true } : { changed: true };
 }
 
@@ -190,10 +202,10 @@ function stripBootstrapFromSoul(soulPath) {
   if (next === '') {
     // SOUL.md only contained our block — remove the file so OpenClaw doesn't
     // bootstrap an empty section every turn.
-    try { fs.unlinkSync(soulPath); } catch (_) {}
+    try { fs.unlinkSync(soulPath); } catch (_silent) {}
     return { changed: true, removed: true };
   }
-  fs.writeFileSync(soulPath, next, { mode: 0o644 });
+  safeWriteFile(soulPath, next, 0o644);
   return { changed: true };
 }
 
@@ -229,7 +241,7 @@ function installOpenclaw({ workspace, repoRoot, dryRun = false, force = false, l
 
   fs.mkdirSync(skillDir, { recursive: true });
   const merged = mergeOpenclawFrontmatter(skillBody);
-  fs.writeFileSync(skillFile, merged, { mode: 0o644 });
+  safeWriteFile(skillFile, merged, 0o644);
   log.write(`  installed: ${skillFile}\n`);
 
   const soul = appendBootstrapToSoul(soulFile, snippet);
@@ -250,7 +262,7 @@ function uninstallOpenclaw({ workspace, dryRun = false, log = noopLog() } = {}) 
     if (dryRun) {
       log.note(`  would remove ${skillDir}/`);
     } else {
-      try { fs.rmSync(skillDir, { recursive: true, force: true }); } catch (_) {}
+      try { fs.rmSync(skillDir, { recursive: true, force: true }); } catch (_silent) {}
       log.note(`  removed ${skillDir}`);
     }
     touched = true;
