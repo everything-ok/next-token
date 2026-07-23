@@ -15,7 +15,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKSPACE_ROOT = ROOT.parent
-SKILL_NAMES = ("hui", "hui-commit", "hui-compress", "hui-help", "hui-review", "hui-stats", "huicrew")
+SKILL_NAMES = ("hui", "hui-commit", "hui-compress", "hui-constraints", "hui-help", "hui-review", "hui-stats", "huicrew")
 HOST_MIRRORS = (".agents", ".augment", ".iflow", ".kiro", ".qwen")
 
 

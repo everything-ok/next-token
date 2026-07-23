@@ -122,9 +122,9 @@ class ModeTrackerTests(unittest.TestCase):
         self.send("be brief in the summary section")
         self.assertIsNone(self.flag_value())
 
-    def test_unscoped_brevity_activates(self):
+    def test_unscoped_brevity_does_not_activate(self):
         self.send("be brief")
-        self.assertEqual(self.flag_value(), "full")
+        self.assertIsNone(self.flag_value())
 
     def test_activate_hui_still_works(self):
         self.send("activate hui")

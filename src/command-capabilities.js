@@ -25,6 +25,7 @@ const COMMANDS = Object.freeze([
   { name: 'hui-session', kind: 'host-utility', requires: 'localTranscript', hosts: ['claude'] },
   { name: 'hui-init', kind: 'utility', hosts: ['claude', 'gemini', 'opencode'] },
   { name: 'hui-help', kind: 'utility', hosts: ['claude', 'gemini', 'opencode'] },
+  { name: 'hui-constraints', kind: 'utility', hosts: ['claude', 'gemini', 'opencode'] },
 ]);
 
 function commandsFor(platform) {

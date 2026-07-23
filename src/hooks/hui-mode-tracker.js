@@ -57,18 +57,14 @@ process.stdin.on('end', () => {
     const isQuestion =
       /^(what|whats|what's|how|why|when|where|who|does|do|did|is|are|can|could|would|should|tell me|explain)\b/.test(prompt);
 
-    // Natural language activation (e.g. "activate hui", "turn on hui
-    // mode", "talk like hui"). README tells users they can say these.
-    // Also brevity requests ("less tokens", "be brief/terse", "fewer tokens",
-    // "shorter answers") — but not when scoped to a single section
-    // ("be brief in the summary"), which is a one-off instruction, not a
-    // session-wide mode switch.
+    // Natural-language activation is deliberately limited to explicit HUI intent.
+    // Requests such as "be brief" affect the current answer only; they must not
+    // silently change the mode for later prompts.
     if (!wantsOff && !isQuestion) {
       if (/\b(activate|enable|start|turn on|use|switch to|want|give me)\b[^.]{0,40}\bhui\b/.test(prompt) ||
           /\btalk like\b[^.]{0,40}\bhui\b/.test(prompt) ||
           /\bhui\s+mode\s+(on|please|now)\b/.test(prompt) ||
-          /^hui(\s+mode)?\s*[.!]*$/.test(prompt) ||
-          /\b(less tokens|fewer tokens|be brief|be terse|shorter answers)\b(?!\s+(in|for|on|about|when|during|with)\b)/.test(prompt)) {
+          /^hui(\s+mode)?\s*[.!]*$/.test(prompt)) {
         const mode = getDefaultMode();
         if (mode !== 'off') {
           recordModeChange(claudeDir, mode); // #601: timestamped transition log

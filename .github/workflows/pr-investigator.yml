@@ -29,3 +29,11 @@ jobs:
         run: |
           files=$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}")
           python .github/scripts/pr_investigator.py $files >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Verify package and behavior
+        run: |
+          npm run check-assets
+          npm run release:preflight
+          npm test

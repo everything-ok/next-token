@@ -1,230 +1,170 @@
-# HUI：产品概览与路线图
+# HUI：功能、使用、验证与路线图
 
-> 面向 AI coding agent 的简洁技术表达工具。
+> 面向 AI coding agent 的 focused technical-work toolkit。npm 包名：`next-token`；产品与命令名：`HUI` / `hui`。
 
-## 1. 目的与定位
+## 1. 产品契约
 
-HUI 通过 skills、规则、插件和本地 hooks，引导 coding agent 使用更紧凑的技术表达：减少寒暄、重复、填充词和模糊措辞；保留技术术语、代码、API 名称、命令、错误文本和安全提示。
+HUI 通过 canonical skills、始终生效规则、host hooks、安装器和测试，帮助 coding agent：
 
-HUI 是写作与交互风格控制工具，不是 token、成本、延迟、性能、准确率或账单测量工具。量化边界见 [`docs/HONEST-NUMBERS.md`](docs/HONEST-NUMBERS.md)。
+- 保持技术回复直接、简洁，并保留代码、命令、路径、错误和安全信息；
+- 以证据为先，区分已观察事实、推断、假设和未知/受阻信息；
+- 在非平凡任务中明确范围、验收条件和验证方式；
+- 完成后如实报告运行过的检查、结果和未运行/被阻塞项；
+- 避免无关扩展、虚构 API/测试结果/发布状态及不安全的实现。
 
-| 名称 | 值 | 用途 |
-|---|---|---|
-| 产品名 | `HUI` | 插件、skills、`/hui`、hooks、状态栏和全局命令 |
-| npm 分发名 | `next-token` | `npx -y next-token -- ...` 安装入口 |
-| 运行环境 | Node.js >= 18 | 安装器和本地工具 |
-| canonical 来源 | `skills/` | 发布到各 host 的技能源码 |
+HUI **不是** 模型能力、准确率、成本、token 节省、延迟或账单测量工具。提示词和规则不能保证杜绝幻觉、验证 HUI 无法访问的工具输出、绕过 host 权限，或让不支持 hooks 的平台获得 Claude Code 同等能力。量化文案边界见 [`docs/HONEST-NUMBERS.md`](docs/HONEST-NUMBERS.md)。
 
-## 2. 当前已实现能力
+## 2. 当前功能
 
-| 领域 | 能力 | 行为与边界 |
-|---|---|---|
-| 表达模式 | `lite`、`full`、`ultra`、`wenyan-lite`、`wenyan-full`、`wenyan-ultra` | `/hui` 默认启用 `full`；影响后续回复，不重写已有 transcript、context 或 cache。 |
-| 清晰度回退 | 安全告警、不可逆操作、歧义多步骤、澄清请求 | 这些场景恢复正常清晰表达；代码、commit、PR 描述保持正常写法。 |
-| 本地文本示例 | `/hui demo` | 返回固定“本地文本示例”；不调用模型，不读取或写入 mode、session、history、statusline 状态。Claude Code hook 支持。 |
-| 提交与审查 | `/hui-commit`、`/hui-review` | 生成 Conventional Commits 文案或单行 review finding；不自动 stage、commit、approve 或改代码。 |
-| 文件改写 | `/hui-compress <file>` | 改写受支持的自然语言文件；保留备份并验证受保护结构。 |
-| 会话摘要 | `/hui-session`、`/hui-session --compact` | Claude Code 专用。默认读取当前 transcript 摘要；`--compact` 只创建经验证的相邻副本，原文件不改。 |
-| 本地会话用量 | `/hui-stats` | Claude Code 专用。读取本地 JSONL 中回复轮次、输出 token、cache-read token；支持 `--all`、`--since Nh|Nd`。不推算节省、成本或基线。 |
-| 项目规则初始化 | `/hui-init` | 为支持的 agent 写入 repo 规则；支持 dry-run 和指定 host。 |
-| 协作角色 | huicrew | `investigator` 只读定位、`builder` 限 1–2 文件修改、`reviewer` 审查 diff/file。 |
-| MCP 扩展 | `hui-shrink` | 可选 stdio proxy；仅改写 `tools/list`、`prompts/list`、`resources/list` 的 description 等 prose 字段。请求体和 `tools/call` 结果不改。 |
+| 功能 | 用户效果 | Canonical 来源 | 支持范围 |
+|---|---|---|---|
+| Evidence-first constraints | 要求事实依据、未知披露、验收与验证报告；禁止虚构 | `skills/hui-constraints/` | 所有安装了 skill/rule 的 host；强制能力取决于 host |
+| HUI 表达模式 | `lite`、`full`、`ultra`、文言强度；去除填充语但保留技术内容 | `skills/hui/` | Claude Code、Gemini、OpenCode；其他平台按其 skill/rule 支持 |
+| 模式持久化 | 显式 `/hui` 或明确启用 HUI 才持久化；普通“简短回答”只影响当前回复 | `src/hooks/hui-mode-tracker.js`、OpenCode plugin | Claude Code、OpenCode |
+| 项目规则初始化 | 写入支持 host 的 repo 规则；支持 dry-run、冲突检测和指定 host | `src/tools/hui-init.js`、`src/rules/hui-activate.md` | Cursor、Windsurf、Cline、Copilot、OpenCode、AGENTS/OpenClaw 等 |
+| 提交/审查辅助 | `/hui-commit` 生成 Conventional Commit 文案；`/hui-review` 输出单条 finding | `skills/hui-commit/`、`skills/hui-review/` | host 命令能力允许时 |
+| 安全文本压缩 | 仅改写明确指定的自然语言文件，创建备份并做结构校验 | `skills/hui-compress/` | 支持该 skill 的 host |
+| Claude 本地工具 | `/hui-session`、`/hui-stats`、状态栏与本地文本示例 | `src/hooks/` | 仅 Claude Code |
+| huicrew | investigator / builder / reviewer 协作角色 | `agents/` | 支持 agent 文件的 host；不持久改写 agent 模型 |
+| MCP prose proxy | 可选 `hui-shrink` 仅处理 MCP discovery 响应的 prose 字段 | `src/mcp-servers/hui-shrink/` | 显式配置的 stdio MCP host |
 
-### `/hui-compress` 保护范围
+## 3. 平台能力
 
-支持 `.md`、`.txt`、`.rst`、`.typ`、`.typst`、`.tex` 与无扩展名自然语言文件；拒绝代码、配置文件和备份文件。
-
-改写时保护并校验：
-
-- fenced/inline code
-- URL、链接、文件路径、命令
-- 技术术语、库名、API 名
-- 标题、日期、版本号、数字
-- Markdown 列表与表格结构
-
-输出仍需人工复核。文件改写不承诺 token、成本、延迟或准确率结果。
-
-## 3. 平台与集成等级
-
-平台清单、自动检测结果和当前可安装项以以下命令为准：
+运行以下命令查看当前机器实际检测和可安装项：
 
 ```bash
 node bin/install.js --list
 ```
 
-| 集成等级 | 平台/方式 | 可用能力 |
+| 集成级别 | 平台 | 已支持能力与限制 |
 |---|---|---|
-| 完整本地集成 | Claude Code | hooks、持久模式、状态栏 badge、`/hui-session`、`/hui-stats`、本地文本示例。 |
-| 原生/可移植命令 | Gemini CLI、OpenCode、OpenClaw、Hermes Agent | 模式与 skills/rules 集成；具体命令由 host 能力决定。 |
-| skills 或规则文件集成 | Codex、Cursor、Windsurf、Cline、GitHub Copilot、Continue、Kilo、Roo、Augment、Aider Desk、Amp、IBM Bob、Crush、Devin、Droid、ForgeCode、Block Goose、iFlow、Kiro、Mistral Vibe、OpenHands、Qwen、Rovo Dev、Tabnine、Trae、Warp、Replit、Junie、Qoder、Antigravity 等 | 通过 skills、规则文件或会话内 `/hui` 使用；不保证拥有 hooks、状态栏、transcript 或本地日志能力。 |
+| 完整本地集成 | Claude Code | hooks、持久模式、状态栏、`/hui-session`、`/hui-stats`、本地 demo；完整 constraints 会在 SessionStart 加载 |
+| 原生插件/命令 | OpenCode | plugin、规则、agent、skills、native commands；无 Claude 本地 transcript、stats 或 statusline 等价能力 |
+| 原生 skills | Hermes Agent | 所有 HUI skills（包括 `hui-constraints`）；不声明 hook 等价能力 |
+| 可移植命令/skills | Gemini CLI、OpenClaw | modes 与 skills/rules；具体命令由 host 能力决定 |
+| 规则或 skills 集成 | Codex、Cursor、Windsurf、Cline、GitHub Copilot、Continue、Kilo、Roo、Augment、Aider Desk、Amp、IBM Bob、Crush、Devin、Droid、ForgeCode、Block Goose、iFlow、Kiro、Mistral Vibe、OpenHands、Qwen、Rovo Dev、Tabnine、Trae、Warp、Replit、Junie、Qoder、Antigravity 等 | prompt/rule 级约束；不承诺 hooks、状态栏、transcript 或本地日志 |
 
-说明：
-
-- “可安装”不等于所有功能完整支持。
-- 部分平台为 soft provider，需使用 `--only <id>` 显式选择。
-- `/hui-session` 与本地 `/hui-stats` 依赖 Claude Code 已验证的 hooks、transcript 与 JSONL 日志契约；不应在其他 host 宣称等价支持。
+“可安装”不等于每项功能均可用。soft provider 需使用 `--only <id>` 显式选择。
 
 ## 4. 安装与使用
 
 ### 安装器
 
-先预览，再写入：
+先预览后写入：
 
 ```bash
 npx -y next-token -- --dry-run --all
 npx -y next-token -- --all
+
+# 源码目录
+node bin/install.js --list
+node bin/install.js --doctor
+node bin/install.js --with-init --dry-run
+node src/tools/hui-init.js . --check-conflicts --json
 ```
 
-常用维护命令：
-
-```bash
-npx -y next-token -- --list
-npx -y next-token -- --doctor
-npx -y next-token -- --only claude
-npx -y next-token -- --dry-run --uninstall
-npx -y next-token -- --uninstall
-```
-
-从源码目录运行时，可用 `node bin/install.js` 替代 `npx -y next-token --`。
-
-### 日常命令
+### 常用命令
 
 ```text
-/hui                    启用 full 模式
-/hui lite               启用 lite 模式
-/hui ultra              启用 ultra 模式
-/hui wenyan             启用文言模式
-/hui demo               显示固定本地文本示例
-stop hui                停用；也可输入 normal mode
-
-/hui-commit             生成简短 commit 文案
-/hui-review             生成一行 review finding
-/hui-compress notes.md  改写指定自然语言文件
-/hui-stats              查看当前 Claude Code 本地会话用量
-/hui-stats --all        汇总本地历史快照
-/hui-stats --since 7d   汇总最近 7 天本地历史快照
-/hui-session            摘要当前 Claude Code transcript
-/hui-session --compact  创建验证后的 sibling compact 副本
-/hui-help               查看命令卡片
-/hui-init --dry-run     预览项目规则初始化
+/hui                    显式启用默认 full 模式
+/hui lite|full|ultra     切换表达强度
+/hui wenyan              切换文言模式
+/hui off                 停用持久模式
+/hui-constraints         查看 evidence-first 约束摘要
+/hui-commit              生成提交文案
+/hui-review              生成单条审查 finding
+/hui-compress notes.md   改写受支持的自然语言文件
+/hui-session [--compact] Claude Code 本地 transcript 操作
+/hui-stats [--all]       Claude Code 本地 usage 观察
+/hui-init --dry-run      预览项目规则初始化
 ```
 
-## 5. 可以期待的效果与明确边界
+- `/hui on` 保持兼容：启用默认模式。
+- `/hui on <未知值>` 或 `/hui mode <未知值>` 不改变已有模式；应改用列出的合法强度。
+- “be brief”“less tokens”“短一点”等普通请求不改变后续会话模式。
+- 用户询问模型身份时，agent 只能陈述当前 host/runtime 已知的模型和提供方；无法确认必须明确未知。
+
+## 5. 使用效果与边界
 
 ### 可以期待
 
-- 技术回复更直接，减少寒暄、重复、套话和犹豫措辞。
-- 技术术语、代码、命令和错误信息保持原样。
-- 高风险或容易误解的内容优先清晰度，不强行压缩。
-- 文件改写提供备份和结构校验。
-- Claude Code 可显示当前 HUI mode badge，并查看本地日志中观察到的会话用量。
+- 技术回答减少寒暄、重复、模糊断言和无关扩展。
+- 有可用材料时，结论可追溯到文件、符号、命令、错误或工具输出。
+- 不确定时明确标记，不把假设包装成事实。
+- 改动完成时区分“已实现”“已验证”“未验证/被阻塞”。
+- 文件压缩保留备份并验证受保护结构。
 
 ### 不应推断
 
-- 没有统一 token 节省、美元成本、延迟、性能或准确率保证。
-- `/hui-stats` 不是账单工具；不提供“未使用 HUI 时”的对照基线。
-- 不同模型、提示词、上下文、缓存、工具调用、套餐和 host 可能产生不同 usage。
-- `/hui-compress` 不替代人工审阅，也不适合代码或配置文件。
-- `evals/` 与 `benchmarks/` 用于开发比较和回归研究，不能外推为用户侧经济收益或质量承诺。
+- HUI 不会自动证明模型推理正确，也不能保证所有事实都已被工具验证。
+- HUI 不提供统一 token/cost/performance/accuracy 保证或“未启用 HUI”的对照基线。
+- `/hui-stats` 是可读取本地 JSONL 的观察工具，不是账单。
+- `/hui-compress` 不适用于代码或配置文件，且语义仍需人工复核。
+- prompt-level constraints 不能替代权限检查、CI、代码审查或显式外部操作确认。
 
-## 6. 隐私、本地性与安全
+## 6. 验证与维护
 
-- HUI 不做持续 telemetry。
-- 安装阶段的 `npx`、插件 CLI、skills CLI 或远程安装方式可能访问对应 registry、仓库或 host 服务；是否联网取决于用户选择的安装路径和平台工具。
-- `/hui-stats` 只读取本地 Claude Code session JSONL；其结果只代表可读取的本地记录。
-- `/hui-session --compact` 不覆盖原 transcript。
-- `hui-compress` 只处理用户显式指定且符合安全策略的文件；敏感路径和不支持类型会被拒绝。
-- `hui-shrink` 默认不启用；上游 MCP 命令必须由用户显式配置。它不改请求体和 tool call 返回值。
-
-## 7. 质量与维护
-
-仓库提供以下检查入口：
+`skills/` 是唯一 canonical 来源。镜像、plugin assets 与 `dist/hui.skill` 必须通过同步脚本生成，不直接手改。
 
 ```bash
-npm test
-npm run release:preflight
-npm run sync-assets
-npm run check-assets
+npm run sync-assets       # 生成 mirrors 与 skill archive（会改文件）
+npm run check-assets      # 检查 generated assets 漂移
+npm run release:preflight # 验证 hook checksum 与 release contract
+npm test                  # Node、Python 与 package smoke
+python tests/verify_repo.py # 更广泛静态/安装验证；Windows 会跳过部分 hook flow
+npm publish --dry-run --access public # 仅预演包内容与 npm publish 流程
 ```
 
-| 检查 | 目的 |
-|---|---|
-| `npm test` | Node、Python 和 package smoke 测试。 |
-| `release:preflight` | 发布前离线完整性检查。 |
-| `sync-assets` | 从 canonical `skills/` 同步 host mirrors 与 `dist/hui.skill`。 |
-| `check-assets` | 检查生成镜像是否漂移。 |
+| 检查 | 覆盖 | 已知盲区 |
+|---|---|---|
+| `check-assets` | canonical skill 与生成镜像一致 | 不执行 host runtime |
+| `release:preflight` | hook manifest、version/tag contract | 不发布、不做远程鉴权 |
+| `npm test` | installer、hooks、parser、skills、压缩、package smoke | 不等于所有 host UI 的端到端验证 |
+| `verify_repo.py` | 语法、manifest、安装静态检查 | Windows 跳过部分 shell/hook 流程 |
+| PR workflow | `check-assets`、preflight、`npm test` | 仍依赖 GitHub Actions 可用性 |
 
-维护规则：
+## 7. 当前限制
 
-1. `skills/` 是技能内容唯一 canonical 来源；不要直接修改生成镜像。
-2. 新增 provider 时，同时更新安装器 provider matrix、安装文档、能力说明和测试。
-3. 功能描述必须能追溯到当前源码、命令定义或 canonical skill。
-4. 不将临时本机环境、固定测试数量、一次性运行结果或发布状态写成长期产品事实。
-5. 涉及 token、成本、性能和质量的文案以 [`docs/HONEST-NUMBERS.md`](docs/HONEST-NUMBERS.md) 为边界来源。
+1. constraints 在 generic host 上是模型指导，不是不可绕过的运行时策略。
+2. `HUICREW_*_MODEL` 只解析为受限、非持久偏好；当前不改写 agent 文件。没有受支持会话级模型 API 的 host 会明确不提供动态覆盖。
+3. 项目当前没有独立 lint、format、typecheck、coverage 或通用 build gate；主要质量门是行为/包测试与 preflight。
+4. 分发镜像与平台能力会随 host API 演进，新增 host 必须同时更新 installer、能力文档和回归测试。
+5. 安装、远程 release verification 和各平台 CLI 可能访问其各自 registry/仓库；HUI 本身不持续 telemetry。
 
 ## 8. 后续计划
 
+### 已完成基础
+
+- [x] canonical skills 与自动镜像同步
+- [x] `hui-init` dry-run、冲突扫描与受控写入
+- [x] 自然语言压缩的 backup/preview/restore 与结构保护
+- [x] MCP discovery response 的受限 prose 处理
+- [x] evidence-first constraints、Claude SessionStart 组合加载、OpenCode/Hermes 分发补齐
+- [x] 普通 PR 的 asset/preflight/full-test 质量门
+
 ### 近期
 
-- [ ] 发布与版本化流程：npm、GitHub release、tag 与可验证分发资产。
-- [x] `--migrate-from-hui`：默认检查，`--force` 应用受管 orphan hook、重复 hook 与失效 statusline 修复；不覆盖用户 entries。
-- [x] 安装 manifest：记录 standalone Claude hooks 的受控文件摘要；uninstall 仅删除摘要匹配文件，保留用户改动。详见 `docs/installer-lifecycle.md`。
-- [x] 规则冲突扫描：`hui-init --check-conflicts [--json]` 检查受管 target 中非 HUI 规则，不写文件。
-- [x] 压缩安全流程：全量/增量改写使用原子 backup/replace，支持 `--preview` 与 `--restore`，并作严格结构验证。
-- [x] MCP response 边界：`hui-shrink` 根据 JSON-RPC request ID/method 只改 list response，不改 `tools/call`。
+- [ ] 为 constraints 增加可版本化的行为评测样本：证据引用、未知处理、范围控制、测试报告。
+- [ ] 评估并仅在有正式 host API 时增加 huicrew 会话级 model override；否则保持明确 unsupported 状态。
+- [ ] 为关键 host 增加真实安装后的命令发现 smoke test。
+- [ ] 建立 changelog 与发布说明模板，记录用户可见变更和迁移风险。
 
 ### 中期
 
-- [ ] Eval quality gate：统一输出结构保留、fidelity 和异常样本信息。
-- [ ] 可选 LLM fidelity judge：结构化结果、版本化 rubric、仅手动或受保护流程运行。
-- [ ] HUI profiles：minimal、technical、documentation、Chinese-wenyan 等预设，统一渲染到不同 host 格式。
-- [x] 规则冲突检测：扫描 HUI 受管 rule target；只报告现有非 HUI 规则和可选 target 范围，不自动覆盖。
-- [ ] 声明式分发 manifest：减少 host mirror、zip、installer asset 与 capability 漏同步。
+- [ ] 声明式 distribution manifest，统一 skills、commands、agents、zip 与 installer 清单，减少遗漏。
+- [ ] 可选 fidelity judge：结构化 rubric、版本化数据集、受保护的手动运行；不得转化为未经验证的准确率承诺。
+- [ ] HUI profiles（minimal、technical、documentation、Chinese-wenyan），统一渲染到不同 host 格式。
 
-### 探索项
+## 9. 发布决策记录
 
-- [ ] 跨模型 provider adapter：在安全预算与受保护 secrets 前提下扩展 eval runner。
-- [ ] 可选本地 effectiveness 研究：仅在版本化评测数据、明确假设和置信度说明齐备后探索；不得转化为未经验证的用户侧 savings 承诺。
+当前 npm package：`next-token`，版本以 [`package.json`](package.json) 为准；Node.js 要求 `>=18`，公开包使用 `publishConfig.access: public`。
 
-## 9. 当前限制与已知问题
+受支持发布流程：
 
-| 范围 | 限制 / 风险 |
-|---|---|
-| Host 能力 | 非 Claude Code host 可能没有 hooks、状态栏、slash command 注册、transcript 或本地日志。 |
-| 平台检测 | 自动检测受 PATH、扩展目录、host 版本和 soft provider 策略限制；必要时使用 `--only <id>`。 |
-| 本地会话工具 | `/hui-stats` 与 `/hui-session` 依赖 Claude Code JSONL/hook 契约；host 格式变化可能影响可用性。 |
-| 文件改写 | 仅支持自然语言文件；即使通过结构校验，语义仍需用户复核。 |
-| MCP proxy | pre-1.0；只改发现类响应的指定 prose 字段，字段集与规则可能调整。 |
-| 分发镜像 | host mirrors、plugin 和 zip 必须从 canonical skills 同步；漏同步会导致不同平台文案或行为漂移。 |
-| 外部依赖 | 远程安装、自动检测与 provider 集成依赖 npm、registry、GitHub、CLI 和网络可用性。 |
+1. 更新版本并确保 tag 为相同的 `v<version>`。
+2. 运行第 6 节全部验证和 `npm publish --dry-run --access public`。
+3. 推送 tag，等待 `release-verify.yml`。
+4. 由有权限的维护者发布 GitHub Release。
+5. 审批 GitHub `npm-publish` protected environment；workflow 通过 npm Trusted Publishing/OIDC 以 provenance 发布并 smoke-test 精确版本。
 
-## 11. 所有权与发布身份
-
-- tracked source、package/plugin metadata、funding、installer links、skills provenance 和本地 Git remote 使用 `HUI` / `HUI/next-token`。
-- License 与 package/plugin display attribution 使用 `HUI Contributors`，表示 HUI 的集体版权与作者身份。
-- repo-local future commit identity 为 `HUI <automation@hui.local>`；generated asset workflow 使用 `HUI Automation <automation@hui.local>`。
-- canonical `hui-commit` 默认不添加 AI 或 co-author trailer。
-- 本地 verified history mirror 已将 reachable commit author/committer 改为 HUI，并移除 Claude co-author trailer。发布该历史仍需外部 GitHub 管理员在维护窗口 force-with-lease 推送。
-- 外部步骤：确保 `HUI/next-token` GitHub organization/repository、npm publisher、marketplace/funding、Actions secrets/protections 都归 HUI 控制；GitHub PR、release、Actions log、fork、cache 与已有 clone 的旧 metadata 需在平台侧单独处理。
-
-## 12. 项目结构
-
-```text
-hui-main/
-├── bin/                         # 统一安装器与 provider 集成
-├── commands/                    # slash command 定义
-├── src/
-│   ├── hooks/                   # Claude Code hooks、模式、session、stats、statusline
-│   ├── tools/hui-init.js        # 项目规则初始化
-│   ├── plugins/opencode/        # OpenCode 原生集成
-│   └── mcp-servers/hui-shrink/  # 可选 MCP description/prose proxy
-├── skills/                      # canonical skills 来源
-├── agents/                      # huicrew agent 定义
-├── scripts/                     # 同步、打包、发布检查
-├── tests/                       # Node 与 Python 测试
-├── evals/                       # 开发评测工具
-├── benchmarks/                  # 开发比较工具
-├── docs/                        # 网站与边界文档
-├── plugins/hui/                 # 插件发布资产
-└── dist/hui.skill               # 生成的 skill 包
-```
+未登录 GitHub 时，无法创建/发布 Release 或审批 protected environment，因此**无法完成项目规定的实际 npm 发版**。本地直接 `npm publish` 只可能在操作者已 npm 登录、拥有 `next-token` 发布授权、符合组织/2FA/provenance 策略且获得显式批准绕过 GitHub/OIDC 流程时进行；它是不可逆外部动作，不会自动执行。

@@ -22,6 +22,8 @@ for (const [input, action, args] of [
 }
 
 assert.equal(modeForParsedCommand(parseHuiCommand('/hui mode ultra'), 'full'), 'ultra');
+assert.equal(modeForParsedCommand(parseHuiCommand('/hui on'), 'ultra'), 'full');
+assert.equal(modeForParsedCommand(parseHuiCommand('/hui on invalid'), 'full'), null);
 assert.equal(modeForParsedCommand(parseHuiCommand('/hui review'), 'full'), 'review');
 assert.equal(modeForParsedCommand(parseHuiCommand('stop-hui'), 'full'), 'off');
 assert.equal(parseHuiCommand('/hui unknown'), null);

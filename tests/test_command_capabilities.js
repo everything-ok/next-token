@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 'use strict';
 
+const fs = require('fs');
+const path = require('path');
 const assert = require('assert');
 const { HOSTS, COMMANDS, commandsFor } = require('../src/command-capabilities');
 
@@ -15,6 +17,14 @@ assert.ok(!namesFor('gemini').includes('hui-session'));
 assert.ok(!namesFor('opencode').includes('hui-stats'));
 assert.ok(!namesFor('opencode').includes('hui-session'));
 assert.deepStrictEqual(commandsFor('unknown'), []);
+
+const opencodeCommands = path.join(__dirname, '..', 'src', 'plugins', 'opencode', 'commands');
+for (const command of commandsFor('opencode')) {
+  assert.ok(
+    fs.existsSync(path.join(opencodeCommands, `${command.name}.md`)),
+    `OpenCode advertises ${command.name} but source command asset is missing`
+  );
+}
 
 for (const command of COMMANDS) {
   assert.ok(Array.isArray(command.hosts) && command.hosts.length > 0, `${command.name} must declare hosts`);

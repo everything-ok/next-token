@@ -297,7 +297,7 @@ test('opencode plugin handles /hui ultra, stop hui, and session init via real ho
     assert.equal(fs.existsSync(flagPath), false, 'expanded template with off should delete the flag');
     await handlers['chat.message']({}, { parts: [{ type: 'text', text:
       'Activate hui mode: \n\nIf no level given, use full. If "off", deactivate.' }] });
-    assert.equal(fs.readFileSync(flagPath, 'utf8'), 'full', 'expanded template without level uses default');
+    assert.equal(fs.existsSync(flagPath), false, 'expanded template without level must preserve inactive mode');
     await handlers['chat.message']({}, { parts: [{ type: 'text', text: '/hui ultra' }] });
     assert.equal(fs.readFileSync(flagPath, 'utf8'), 'ultra');
 

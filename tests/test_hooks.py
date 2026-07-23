@@ -15,6 +15,7 @@ class HookScriptTests(unittest.TestCase):
         env = os.environ.copy()
         env.pop("CLAUDE_PLUGIN_ROOT", None)
         env["HOME"] = str(home)
+        env["CLAUDE_CONFIG_DIR"] = str(home / ".claude")
         env["PYTHONIOENCODING"] = "utf-8"
         if extra_env:
             env.update(extra_env)
@@ -45,7 +46,7 @@ class HookScriptTests(unittest.TestCase):
 
             settings = json.loads((home / ".claude" / "settings.json").read_text())
             self.assertIn("statusLine", settings)
-            self.assertIn(str(statusline), settings["statusLine"]["command"])
+            self.assertIn(statusline.as_posix(), settings["statusLine"]["command"].replace("\\", "/"))
 
     def test_install_reconfigures_missing_statusline(self):
         with tempfile.TemporaryDirectory(prefix="hui-hooks-statusline-") as tmp:
@@ -89,7 +90,10 @@ class HookScriptTests(unittest.TestCase):
 
             updated = json.loads((claude_dir / "settings.json").read_text())
             self.assertIn("statusLine", updated)
-            self.assertIn(str(hooks_dir / "hui-statusline.sh"), updated["statusLine"]["command"])
+            self.assertIn(
+                (hooks_dir / "hui-statusline.sh").as_posix(),
+                updated["statusLine"]["command"].replace("\\", "/"),
+            )
 
     def test_uninstall_preserves_custom_statusline(self):
         with tempfile.TemporaryDirectory(prefix="hui-hooks-uninstall-") as tmp:
@@ -215,6 +219,38 @@ class HookScriptTests(unittest.TestCase):
             )
 
             self.assertIn("PLUGIN ROOT MARKER RULESET", result.stdout)
+
+    def test_activate_emits_canonical_constraints(self):
+        with tempfile.TemporaryDirectory(prefix="hui-hooks-constraints-") as tmp:
+            home = Path(tmp)
+            (home / ".claude").mkdir(parents=True)
+
+            result = self.run_cmd(["node", "src/hooks/hui-activate.js"], home)
+
+            self.assertIn("## Constraints Active", result.stdout)
+            self.assertIn("## Evidence and Uncertainty", result.stdout)
+            self.assertNotIn("Proactively offer", result.stdout)
+
+    def test_activate_prefers_plugin_root_constraints(self):
+        with tempfile.TemporaryDirectory(prefix="hui-hooks-constraint-root-") as tmp:
+            home = Path(tmp)
+            (home / ".claude").mkdir(parents=True)
+            plugin_root = home / "plugin-cache"
+            hui_dir = plugin_root / "skills" / "hui"
+            constraints_dir = plugin_root / "skills" / "hui-constraints"
+            hui_dir.mkdir(parents=True)
+            constraints_dir.mkdir(parents=True)
+            (hui_dir / "SKILL.md").write_text("---\nname: hui\n---\nPLUGIN HUI\n")
+            (constraints_dir / "SKILL.md").write_text("---\nname: hui-constraints\n---\nPLUGIN CONSTRAINTS\n")
+
+            result = self.run_cmd(
+                ["node", "src/hooks/hui-activate.js"],
+                home,
+                extra_env={"CLAUDE_PLUGIN_ROOT": str(plugin_root)},
+            )
+
+            self.assertIn("PLUGIN HUI", result.stdout)
+            self.assertIn("PLUGIN CONSTRAINTS", result.stdout)
 
 
 if __name__ == "__main__":

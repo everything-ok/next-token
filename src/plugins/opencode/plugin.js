@@ -126,7 +126,8 @@ function parseModeChange(promptRaw) {
     if (arg === 'off' || arg === 'stop' || arg === 'disable') return 'off';
     if (arg === 'wenyan-full') return 'wenyan';
     if (VALID_MODES.includes(arg) && !INDEPENDENT_MODES.has(arg)) return arg;
-    return getDefaultMode();
+    // Unknown template argument must not overwrite an active mode.
+    return null;
   }
 
   // Natural-language activation

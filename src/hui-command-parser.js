@@ -41,7 +41,10 @@ function parseHuiCommand(raw) {
     return { action: 'mode', args: [args[0] === 'wenyan-full' ? 'wenyan' : args[0]], legacy: true };
   }
   const action = args[0];
-  if (action === 'on') return { action, args: [args[1] || 'full'], legacy: false };
+  if (action === 'on') {
+    if (args.length < 2) return { action, args: ['full'], legacy: false };
+    return { action, args: [args[1]], legacy: false };
+  }
   if (action === 'off' || action === 'stop' || action === 'disable' || action === 'stop-hui') return { action: 'off', args: [], legacy: action !== 'off' };
   if (['mode', 'status', 'demo', 'benchmark', 'session', 'stats', 'commit', 'review', 'compress', 'init', 'help'].includes(action)) {
     return { action, args: args.slice(1), legacy: false };
@@ -52,7 +55,7 @@ function parseHuiCommand(raw) {
 function modeForParsedCommand(command, defaultMode) {
   if (!command) return null;
   if (command.action === 'off') return 'off';
-  if (command.action === 'on') return LEVELS.has(command.args[0]) ? command.args[0] : defaultMode;
+  if (command.action === 'on') return LEVELS.has(command.args[0]) ? command.args[0] : null;
   if (command.action === 'mode') return LEVELS.has(command.args[0]) ? command.args[0] : null;
   if (['commit', 'review', 'compress'].includes(command.action)) return command.action;
   return null;

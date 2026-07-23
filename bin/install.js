@@ -625,7 +625,7 @@ function installViaSkills(ctx, prov) {
 
 // ── hermes native install ──────────────────────────────────────────────────
 // Drops the hui skills into ~/.hermes/skills/productivity/ (or HERMES_HOME if set).
-const HERMES_SKILL_DIRS = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'huicrew'];
+const HERMES_SKILL_DIRS = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'hui-constraints', 'huicrew'];
 
 function hermesConfigDir() {
   // Hermes uses ~/.hermes by default, or HERMES_HOME env var.
@@ -686,7 +686,7 @@ function installHermes(ctx) {
 // opencode.json with a "plugin" array entry. Mirrors the Claude Code hook
 // architecture as closely as opencode allows — only the statusline is missing
 // (opencode's TUI exposes no plugin-writable badge).
-const OPENCODE_SKILL_DIRS  = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'huicrew'];
+const OPENCODE_SKILL_DIRS  = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'hui-constraints', 'huicrew'];
 const OPENCODE_AGENT_FILES = ['huicrew-investigator.md', 'huicrew-builder.md', 'huicrew-reviewer.md'];
 const OPENCODE_COMMAND_FILES = commandsFor('opencode').map(command => `${command.name}.md`);
 const OPENCODE_PLUGIN_REL = './plugins/hui/plugin.js';

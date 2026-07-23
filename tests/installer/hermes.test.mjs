@@ -1,13 +1,13 @@
 // Hermes Agent native install — fresh install lands skills, uninstall removes them.
 //
 // Hermes loads skills from <HERMES_HOME>/skills/<category>/<skill>/SKILL.md
-// (verified against a live `hermes skills list`). The installer copies the 7
-// hui skill dirs into the `productivity/` category. `--only hermes` makes
+// (verified against a live `hermes skills list`). The installer copies the HUI
+// skill dirs into the `productivity/` category. `--only hermes` makes
 // the provider explicit, so no `hermes` binary needs to be on PATH for the
 // dispatch to run — we drive it purely through a throwaway HERMES_HOME.
 //
 // The uninstall test is the important one: PR #524 shipped installHermes with
-// NO matching uninstall block, so `--uninstall` silently orphaned all 7 skill
+// no matching uninstall block, so `--uninstall` silently orphaned all skill
 // folders forever. This pins the symmetry so it cannot regress.
 
 import { test } from 'node:test';
@@ -22,7 +22,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(HERE, '..', '..');
 const INSTALLER = path.join(REPO_ROOT, 'bin', 'install.js');
 
-const SKILLS = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'huicrew'];
+const SKILLS = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'hui-constraints', 'huicrew'];
 
 function freshHome() {
   return fs.mkdtempSync(path.join(os.tmpdir(), 'hui-hermes-'));
@@ -39,8 +39,8 @@ function productivityDir(hermesHome) {
   return path.join(hermesHome, 'skills', 'productivity');
 }
 
-// ── 1. Fresh install drops all 7 skills with SKILL.md in the productivity category ──
-test('hermes fresh install lands 7 skill dirs with SKILL.md under skills/productivity/', () => {
+// ── 1. Fresh install drops every managed skill with SKILL.md under productivity ──
+test('hermes fresh install lands every managed skill under skills/productivity/', () => {
   const home = freshHome();
   try {
     const r = runInstaller(['--only', 'hermes'], home);
