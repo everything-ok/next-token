@@ -40,9 +40,17 @@ def atomic_write(target: Path, content: bytes) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _normalize_lf(data: bytes) -> bytes:
+    """Normalize CRLF/CR to LF so generated assets are byte-identical across
+    CRLF and LF checkouts (the committed assets store LF)."""
+    if b"\r" not in data:
+        return data
+    return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
 def source_files(source: Path) -> dict[Path, bytes]:
     return {
-        path.relative_to(source): path.read_bytes()
+        path.relative_to(source): _normalize_lf(path.read_bytes())
         for path in sorted(source.rglob("*"))
         if path.is_file() and "__pycache__" not in path.parts
     }
@@ -54,7 +62,7 @@ def sync_tree(source: Path, target: Path, check: bool) -> bool:
     expected = source_files(source)
     for relative, content in expected.items():
         destination = target / relative
-        if destination.exists() and destination.read_bytes() == content:
+        if destination.exists() and _normalize_lf(destination.read_bytes()) == content:
             continue
         if check:
             print(f"drift: {display_path(destination)}")
@@ -67,8 +75,8 @@ def sync_tree(source: Path, target: Path, check: bool) -> bool:
 
 
 def copy_file(source: Path, target: Path, check: bool) -> bool:
-    expected = source.read_bytes()
-    if target.exists() and target.read_bytes() == expected:
+    expected = _normalize_lf(source.read_bytes())
+    if target.exists() and _normalize_lf(target.read_bytes()) == expected:
         return False
     if check:
         print(f"drift: {display_path(target)}")
@@ -89,7 +97,12 @@ def build_skill_zip(check: bool) -> bool:
                     info = zipfile.ZipInfo(path.relative_to(ROOT / "skills").as_posix())
                     info.date_time = (1980, 1, 1, 0, 0, 0)
                     info.compress_type = zipfile.ZIP_DEFLATED
-                    archive.writestr(info, path.read_bytes())
+                    # Normalize CRLF -> LF so the archive is byte-identical whether
+                    # built on a CRLF checkout (Windows core.autocrlf=true) or an LF
+                    # checkout (Linux CI). The committed archive stores LF; without
+                    # this, a Windows checkout rebuilds a CRLF archive and check-assets
+                    # reports drift even though the source content is unchanged.
+                    archive.writestr(info, _normalize_lf(path.read_bytes()))
         expected = candidate.read_bytes()
     if target.exists() and target.read_bytes() == expected:
         return False
