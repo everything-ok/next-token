@@ -104,6 +104,11 @@ def build_skill_zip(check: bool) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--check", action="store_true")
+    parser.add_argument(
+        "--workspace-mirror",
+        action="store_true",
+        help="also sync the monorepo-level ../.agents mirror (default off; only meaningful inside a monorepo checkout)",
+    )
     args = parser.parse_args()
     changed = False
 
@@ -116,8 +121,13 @@ def main() -> int:
         for skill in SKILL_NAMES:
             changed |= sync_tree(ROOT / "skills" / skill, ROOT / host / "skills" / skill, args.check)
 
-    for skill in SKILL_NAMES:
-        changed |= sync_tree(ROOT / "skills" / skill, WORKSPACE_ROOT / ".agents" / "skills" / skill, args.check)
+    # The workspace-level ../.agents mirror only exists inside the HUI monorepo
+    # checkout. When next-token is cloned standalone (e.g. release CI), the
+    # parent directory has no .agents mirror, so syncing it there would always
+    # report drift. Only run it when explicitly requested.
+    if args.workspace_mirror:
+        for skill in SKILL_NAMES:
+            changed |= sync_tree(ROOT / "skills" / skill, WORKSPACE_ROOT / ".agents" / "skills" / skill, args.check)
 
     changed |= build_skill_zip(args.check)
     if args.check and changed:
