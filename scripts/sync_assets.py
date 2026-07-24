@@ -101,6 +101,11 @@ def build_skill_zip(check: bool) -> bool:
                     info = zipfile.ZipInfo(path.relative_to(ROOT / "skills").as_posix())
                     info.date_time = (1980, 1, 1, 0, 0, 0)
                     info.compress_type = zipfile.ZIP_STORED
+                    # Force FAT as the creating system so the central-directory
+                    # "version made by" host-OS byte is identical on Windows and
+                    # Linux; otherwise the archive differs by a single byte even
+                    # though its members are byte-identical.
+                    info.create_system = 0
                     # Normalize CRLF -> LF so the archive is byte-identical whether
                     # built on a CRLF checkout (Windows core.autocrlf=true) or an LF
                     # checkout (Linux CI).
