@@ -13,6 +13,14 @@ HOOKS = ROOT / "src" / "hooks"
 INSTALLER = ROOT / "bin" / "install.js"
 
 
+def _normalize_lf(data: bytes) -> bytes:
+    """Normalize CRLF/CR to LF so the checksum is stable across CRLF and LF
+    checkouts (the committed manifest stores LF digests)."""
+    if b"\r" not in data:
+        return data
+    return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
 def main() -> int:
     package = json.loads((ROOT / "package.json").read_text(encoding="utf-8"))
     installer = INSTALLER.read_text(encoding="utf-8")
@@ -38,7 +46,7 @@ def main() -> int:
     if missing:
         raise RuntimeError("Checksum manifest missing: " + ", ".join(missing))
     for name in required:
-        actual = hashlib.sha256((HOOKS / name).read_bytes()).hexdigest()
+        actual = hashlib.sha256(_normalize_lf((HOOKS / name).read_bytes())).hexdigest()
         if manifest[name] != actual:
             raise RuntimeError(f"Checksum mismatch: {name}")
     print(f"Release preflight passed for {package['name']} {package['version']} ({expected_ref})")
