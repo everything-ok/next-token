@@ -90,18 +90,20 @@ def build_skill_zip(check: bool) -> bool:
     target = ROOT / "dist" / "hui.skill"
     with tempfile.TemporaryDirectory(dir=target.parent if target.parent.exists() else None) as tmp:
         candidate = Path(tmp) / "hui.skill"
-        with zipfile.ZipFile(candidate, "w", zipfile.ZIP_DEFLATED) as archive:
+        # ZIP_STORED (no compression) keeps the archive byte-identical across
+        # builds, because DEFLATED output varies with the zlib build/version and
+        # is not reproducible across Windows/Linux runners — that non-determinism
+        # made check-assets report spurious dist drift on CI.
+        with zipfile.ZipFile(candidate, "w", zipfile.ZIP_STORED) as archive:
             source = ROOT / "skills" / "hui"
             for path in sorted(source.rglob("*")):
                 if path.is_file() and "__pycache__" not in path.parts:
                     info = zipfile.ZipInfo(path.relative_to(ROOT / "skills").as_posix())
                     info.date_time = (1980, 1, 1, 0, 0, 0)
-                    info.compress_type = zipfile.ZIP_DEFLATED
+                    info.compress_type = zipfile.ZIP_STORED
                     # Normalize CRLF -> LF so the archive is byte-identical whether
                     # built on a CRLF checkout (Windows core.autocrlf=true) or an LF
-                    # checkout (Linux CI). The committed archive stores LF; without
-                    # this, a Windows checkout rebuilds a CRLF archive and check-assets
-                    # reports drift even though the source content is unchanged.
+                    # checkout (Linux CI).
                     archive.writestr(info, _normalize_lf(path.read_bytes()))
         expected = candidate.read_bytes()
     if target.exists() and target.read_bytes() == expected:
