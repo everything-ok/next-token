@@ -25,7 +25,7 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
         run: |
-          expected="v$(node -p \"require('./package.json').version\")"
+          expected="v$(node -p "require('./package.json').version")"
           test "$RELEASE_TAG" = "$expected"
       - name: Validate release artifact
         env:
