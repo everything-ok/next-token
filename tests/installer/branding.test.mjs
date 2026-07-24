@@ -17,6 +17,14 @@ function read(relative) {
   return fs.readFileSync(path.join(ROOT, relative), 'utf8');
 }
 
+// Normalize CRLF/CR to LF so hashes match across CRLF (Windows) and LF (Linux)
+// checkouts — the committed skills-lock.json stores LF digests.
+function hashCanonical(skill) {
+  const bytes = fs.readFileSync(path.join(ROOT, 'skills', skill, 'SKILL.md'));
+  const lf = bytes.toString('binary').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  return crypto.createHash('sha256').update(Buffer.from(lf, 'binary')).digest('hex');
+}
+
 function run(args) {
   return childProcess.spawnSync(process.execPath, ['bin/install.js', ...args], {
     cwd: ROOT,
@@ -98,27 +106,30 @@ test('plugin manifests expose HUI and existing assets', () => {
 });
 
 test('all HUI skill mirrors and locks match canonical content', () => {
-  const locks = [
-    JSON.parse(read('skills-lock.json')),
-    JSON.parse(fs.readFileSync(path.join(WORKSPACE, 'skills-lock.json'), 'utf8')),
-  ];
+  const locks = [JSON.parse(read('skills-lock.json'))];
+  // The workspace-level ../skills-lock.json only exists inside the HUI monorepo
+  // checkout; when next-token is cloned standalone (release CI), it is absent.
+  const workspaceLock = path.join(WORKSPACE, 'skills-lock.json');
+  if (fs.existsSync(workspaceLock)) locks.push(JSON.parse(fs.readFileSync(workspaceLock, 'utf8')));
   for (const lock of locks) {
     assert.deepEqual(Object.keys(lock.skills).sort(), SKILLS);
     for (const skill of SKILLS) {
       const entry = lock.skills[skill];
-      const canonical = fs.readFileSync(path.join(ROOT, 'skills', skill, 'SKILL.md'));
       assert.equal(entry.source, REPOSITORY);
       assert.equal(entry.skillPath, `skills/${skill}/SKILL.md`);
-      assert.equal(entry.computedHash, crypto.createHash('sha256').update(canonical).digest('hex'));
+      assert.equal(entry.computedHash, hashCanonical(skill));
     }
   }
   for (const skill of SKILLS) {
     const canonical = fs.readFileSync(path.join(ROOT, 'skills', skill, 'SKILL.md'));
-    for (const mirror of [
-      path.join(ROOT, '.agents', 'skills', skill, 'SKILL.md'),
-      path.join(WORKSPACE, '.agents', 'skills', skill, 'SKILL.md'),
-    ]) {
-      assert.deepEqual(fs.readFileSync(mirror), canonical, `${mirror} differs`);
+    const mirrors = [path.join(ROOT, '.agents', 'skills', skill, 'SKILL.md')];
+    const workspaceMirror = path.join(WORKSPACE, '.agents', 'skills', skill, 'SKILL.md');
+    if (fs.existsSync(workspaceMirror)) mirrors.push(workspaceMirror);
+    for (const mirror of mirrors) {
+      // Compare normalized (LF) bytes so a CRLF checkout doesn't read as drift.
+      const mirrorNorm = fs.readFileSync(mirror).toString('binary').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const canonicalNorm = canonical.toString('binary').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      assert.equal(mirrorNorm, canonicalNorm, `${mirror} differs`);
     }
   }
 });

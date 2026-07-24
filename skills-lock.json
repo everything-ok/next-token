@@ -11,13 +11,13 @@
       "source": "HUI/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-commit/SKILL.md",
-      "computedHash": "639602b45f4849bea8f39d83d6940940e955c22871cb4c77feee0cdd16d88ac0"
+      "computedHash": "73c108fcdb493403ad0113365795e9cf61f86cd970f3e77dcaacc579efcba8a0"
     },
     "hui-compress": {
       "source": "HUI/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-compress/SKILL.md",
-      "computedHash": "978aebfbc996d4bbc45fc9d51cf0e3fa1a90f1cb729a264ef1e05925b41be21b"
+      "computedHash": "2e61b219a3c347ae9bbdeb5af18d0299fc03b68358d9186f8708ebcd9238bf51"
     },
     "hui-constraints": {
       "source": "HUI/next-token",
@@ -29,13 +29,13 @@
       "source": "HUI/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-help/SKILL.md",
-      "computedHash": "f49e7671498820aa4a0cc1b1af3abd618a9379aeacdb4dcd63b07970d7e8ba37"
+      "computedHash": "fa6695ff7edc8fbab294d9bba9038d42dce0a8b2fefcfbaa001c9b83cdfc7f72"
     },
     "hui-review": {
       "source": "HUI/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-review/SKILL.md",
-      "computedHash": "56933ccbec1e6875267c12af57cddfc5ef7c27466a327af84ebb8c89526fd3ef"
+      "computedHash": "75b99aabce4b59bbea0b3e282678433ab8a5de280ce14831ad39e76aa07553ed"
     },
     "hui-stats": {
       "source": "HUI/next-token",
