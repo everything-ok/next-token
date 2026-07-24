@@ -27,6 +27,19 @@ jobs:
         run: |
           expected="v$(node -p "require('./package.json').version")"
           test "$RELEASE_TAG" = "$expected"
+      - name: Diagnose line endings
+        run: |
+          echo "git config core.autocrlf: $(git config --get core.autocrlf || echo unset)"
+          echo "skills/hui/SKILL.md bytes: $(wc -c < skills/hui/SKILL.md)"
+          echo "skills/hui/SKILL.md CR count: $(grep -c $'\r' skills/hui/SKILL.md || true)"
+          echo "dist/hui.skill bytes: $(wc -c < dist/hui.skill)"
+          python - <<'PY'
+          import zipfile
+          z = zipfile.ZipFile('dist/hui.skill')
+          for n in z.namelist():
+              b = z.read(n)
+              print(f"  committed dist {n}: {len(b)} bytes, CRLF {b.count(b'\\r\\n')}")
+          PY
       - name: Validate release artifact
         env:
           RELEASE_TAG: ${{ github.event.release.tag_name }}
