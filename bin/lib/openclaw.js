@@ -215,7 +215,7 @@ function installOpenclaw({ workspace, repoRoot, dryRun = false, force = false, l
   const skillBody = loadSkillBody(repoRoot);
   if (!skillBody) {
     log.warn('  openclaw install requires the hui repo on disk (skills/hui/SKILL.md missing).');
-    log.note('  Re-run from a clone or via `npx -y next-token -- --only openclaw`.');
+    log.note('  Re-run from a clone or via `npx -y next-token-hui -- --only openclaw`.');
     return { ok: false, reason: 'repo not available' };
   }
   const snippet = loadBootstrapSnippet(repoRoot);

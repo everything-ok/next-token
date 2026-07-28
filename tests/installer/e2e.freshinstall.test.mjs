@@ -124,6 +124,30 @@ test('fresh install populates hooks dir and settings.json (skipped without `clau
     assert.ok(settings.statusLine, 'statusLine not set');
     assert.match(getStatuslineCommand(settings), /hui-statusline/,
       'statusLine command does not reference hui');
+
+    // Regression guard (issue: standalone hook crashed on load). The installer
+    // copies src/hooks/* into <configDir>/hooks/ but never copies
+    // src/hui-command-parser.js, so hui-mode-tracker.js's old
+    // `require('../hui-command-parser')` threw MODULE_NOT_FOUND at load time
+    // and the hook exited 1 on every UserPromptSubmit. The file-exists checks
+    // above never caught this — only executing the installed hook does. Run it
+    // exactly as Claude Code would: {prompt} JSON on stdin, exit 0, and the
+    // mode flag actually written.
+    const tracker = path.join(hooks, 'hui-mode-tracker.js');
+    const run = spawnSync(process.execPath, [tracker], {
+      input: JSON.stringify({ prompt: '/hui lite' }),
+      env: { ...process.env, CLAUDE_CONFIG_DIR: dir },
+      stdio: ['pipe', 'pipe', 'pipe'],
+      encoding: 'utf8',
+    });
+    assert.equal(run.status, 0,
+      `installed hui-mode-tracker.js must exit 0; got status=${run.status}\n` +
+      `stderr: ${(run.stderr || '').trim()}`);
+    assert.doesNotMatch(run.stderr || '', /Cannot find module/,
+      `installed hook still has a broken require:\n${(run.stderr || '').trim()}`);
+    const flag = path.join(dir, '.hui-active');
+    assert.equal(fs.readFileSync(flag, 'utf8').trim(), 'lite',
+      'installed hook did not write the mode flag for /hui lite');
   } finally {
     try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }
@@ -197,6 +221,21 @@ test('uninstall strips hui hooks but preserves user-authored ones (skipped witho
     // Statusline pointing at hui should be removed.
     assert.doesNotMatch(getStatuslineCommand(settings), /hui-statusline/,
       'hui statusline survived uninstall');
+
+    // Regression guard: uninstall must also remove the runtime state files
+    // hui writes under the config dir, not just hooks/settings. .hui-active is
+    // the install marker; .hui-active.prev, .hui-history.jsonl, and
+    // .hui-mode-log.jsonl are produced by hui-mode-tracker/hui-stats at run
+    // time. A clean uninstall should leave no hui-owned files behind.
+    fs.writeFileSync(path.join(dir, '.hui-active.prev'), 'full');
+    fs.writeFileSync(path.join(dir, '.hui-history.jsonl'), '{"ts":1}\n');
+    fs.writeFileSync(path.join(dir, '.hui-mode-log.jsonl'), '{"ts":1,"mode":"full"}\n');
+    const r3 = runInstaller(['--uninstall'], dir, { PATH: cleanPath });
+    assert.notEqual(r3.status, 2, `second uninstall argv error: ${r3.stderr}`);
+    for (const name of ['.hui-active.prev', '.hui-history.jsonl', '.hui-mode-log.jsonl']) {
+      assert.equal(fs.existsSync(path.join(dir, name)), false,
+        `state file ${name} survived uninstall`);
+    }
   } finally {
     try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch (_) {}
   }

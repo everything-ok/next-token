@@ -7,8 +7,8 @@ HUI makes AI coding-agent replies shorter while preserving technical substance.
 | Layer | Value | Purpose |
 |---|---|---|
 | Product | **HUI** | Plugins, skills, `/hui`, hooks, statusline, global `hui` command |
-| npm distribution | `next-token` | Registry package and `npx` installation entry |
-| Repository | [`HUI/next-token`](https://github.com/HUI/next-token) | Source, releases, marketplace and skills source |
+| npm distribution | `next-token-hui` | Registry package and `npx` installation entry |
+| Repository | [`everything-ok/next-token`](https://github.com/everything-ok/next-token) | Source, releases, marketplace and skills source |
 
 ## Install
 
@@ -16,15 +16,15 @@ After first npm release, install with:
 
 ```bash
 # Run current public npm release without global install
-npx -y next-token -- --help
-npx -y next-token -- --dry-run --all
+npx -y next-token-hui -- --help
+npx -y next-token-hui -- --dry-run --all
 
 # Install command globally
-npm install -g next-token
+npm install -g next-token-hui
 hui --help
 
 # Pin exact release for reproducible installation
-npx -y next-token@<version> -- --dry-run --all
+npx -y next-token-hui@<version> -- --dry-run --all
 ```
 
 After global installation, use brand command:
@@ -33,7 +33,7 @@ After global installation, use brand command:
 hui --help
 ```
 
-`hui` is a package bin alias. Use `next-token` with `npx`; do not assume an npm package named `hui` exists.
+`hui` is a package bin alias. Use `next-token-hui` with `npx`; do not assume an npm package named `hui` exists.
 
 ## Project-rule conflict check
 

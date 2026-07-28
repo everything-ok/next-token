@@ -1,12 +1,12 @@
 # Install HUI
 
-HUI is product name. `next-token` is npm distribution. Repository source is [`HUI/next-token`](https://github.com/HUI/next-token).
+HUI is product name. `next-token-hui` is npm distribution. Repository source is [`everything-ok/next-token`](https://github.com/everything-ok/next-token).
 
 | Layer | Value | Use |
 |---|---|---|
 | Product | **HUI** | Plugins, skills, `/hui`, global `hui` command |
-| npm distribution | `next-token` | `npx -y next-token -- ...` |
-| Repository | `HUI/next-token` | GitHub, marketplaces, skills source |
+| npm distribution | `next-token-hui` | `npx -y next-token-hui -- ...` |
+| Repository | `everything-ok/next-token` | GitHub, marketplaces, skills source |
 
 One installer supports listed AI coding agents. Installation and runtime capabilities depend on host integration and detection.
 
@@ -16,33 +16,33 @@ If just want it to work, run the one-liner. If want to know what gets touched, s
 
 ```bash
 # Run latest public package without global install
-npx -y next-token -- --help
+npx -y next-token-hui -- --help
 
 # Install HUI command globally
-npm install -g next-token
+npm install -g next-token-hui
 hui --help
 
 # Pin one immutable release
-npx -y next-token@<version> -- --dry-run --all
+npx -y next-token-hui@<version> -- --dry-run --all
 ```
 
-`next-token@<version>` fetches hook assets from matching immutable Git tag `v<version>` and verifies downloaded hook files against committed SHA-256 manifest. `npx -y next-token` follows npm `latest` tag.
+`next-token-hui@<version>` fetches hook assets from matching immutable Git tag `v<version>` and verifies downloaded hook files against committed SHA-256 manifest. `npx -y next-token-hui` follows npm `latest` tag.
 
 ## One-liner
 
 **macOS / Linux / WSL / Git Bash**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/HUI/next-token/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/everything-ok/next-token/main/install.sh | bash
 ```
 
 **Windows (PowerShell 5.1+)**
 
 ```powershell
-irm https://raw.githubusercontent.com/HUI/next-token/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/everything-ok/next-token/main/install.ps1 | iex
 ```
 
-> Piping a script straight into a shell runs it sight-unseen. If you'd rather read it first, download then run: `curl -fsSL https://raw.githubusercontent.com/HUI/next-token/main/install.sh -o install.sh` (review it) `&& bash install.sh`. The installer downloads hook files from a pinned release tag and verifies them against a committed SHA-256 manifest before writing.
+> Piping a script straight into a shell runs it sight-unseen. If you'd rather read it first, download then run: `curl -fsSL https://raw.githubusercontent.com/everything-ok/next-token/main/install.sh -o install.sh` (review it) `&& bash install.sh`. The installer downloads hook files from a pinned release tag and verifies them against a committed SHA-256 manifest before writing.
 
 What it does:
 
@@ -54,7 +54,7 @@ What it does:
 Want to preview before installing? Use `--dry-run`:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/HUI/next-token/main/install.sh | bash -s -- --dry-run
+curl -fsSL https://raw.githubusercontent.com/everything-ok/next-token/main/install.sh | bash -s -- --dry-run
 ```
 
 ## Per-agent install
@@ -63,41 +63,41 @@ If you want to install for one agent (or want to know exactly what command runs 
 
 | Agent | Install command | Auto-activates? |
 |---|---|:-:|
-| **Claude Code** | `claude plugin marketplace add HUI/next-token && claude plugin install hui@hui` | Yes |
-| **Gemini CLI** | `gemini extensions install https://github.com/HUI/next-token` | Yes |
-| **opencode** | `node bin/install.js --only opencode` *(or `npx -y next-token -- --only opencode`)* | Yes (plugin + AGENTS.md) |
-| **OpenClaw** | `npx -y next-token -- --only openclaw` | Yes (workspace skill + SOUL.md) |
-| **Hermes Agent** | `npx -y next-token -- --only hermes` *(or `node bin/install.js --only hermes` from a clone)* | Yes (native skills, enabled on load) |
-| **Codex CLI** | `npx skills add HUI/next-token -a codex` | Per-session: `/hui` |
-| **Cursor** | `npx skills add HUI/next-token -a cursor` | Per-session by default; `--with-init` for an always-on rule file |
-| **Windsurf** | `npx skills add HUI/next-token -a windsurf` | Per-session by default; `--with-init` for an always-on rule file |
-| **Cline** | `npx skills add HUI/next-token -a cline` | Per-session by default; `--with-init` for an always-on rule file |
-| **GitHub Copilot** *(soft probe)* | `npx -y next-token -- --only copilot --with-init` | Repo-wide instructions via `--with-init` |
-| **Continue** | `npx skills add HUI/next-token -a continue` | No — say `/hui` |
-| **Kilo Code** | `npx skills add HUI/next-token -a kilo` | No |
-| **Roo Code** | `npx skills add HUI/next-token -a roo` | No |
-| **Augment Code** | `npx skills add HUI/next-token -a augment` | No |
-| **Aider Desk** | `npx skills add HUI/next-token -a aider-desk` | No |
-| **Sourcegraph Amp** | `npx skills add HUI/next-token -a amp` | No |
-| **IBM Bob** | `npx skills add HUI/next-token -a bob` | No |
-| **Crush** | `npx skills add HUI/next-token -a crush` | No |
-| **Devin (terminal)** | `npx skills add HUI/next-token -a devin` | No |
-| **Droid (Factory)** | `npx skills add HUI/next-token -a droid` | No |
-| **ForgeCode** | `npx skills add HUI/next-token -a forgecode` | No |
-| **Block Goose** | `npx skills add HUI/next-token -a goose` | No |
-| **iFlow CLI** | `npx skills add HUI/next-token -a iflow-cli` | No |
-| **Kiro CLI** | `npx skills add HUI/next-token -a kiro-cli` | No |
-| **Mistral Vibe** | `npx skills add HUI/next-token -a mistral-vibe` | No |
-| **OpenHands** | `npx skills add HUI/next-token -a openhands` | No |
-| **Qwen Code** | `npx skills add HUI/next-token -a qwen-code` | No |
-| **Atlassian Rovo Dev** | `npx skills add HUI/next-token -a rovodev` | No |
-| **Tabnine CLI** | `npx skills add HUI/next-token -a tabnine-cli` | No |
-| **Trae** | `npx skills add HUI/next-token -a trae` | No |
-| **Warp** | `npx skills add HUI/next-token -a warp` | No |
-| **Replit Agent** | `npx skills add HUI/next-token -a replit` | No |
-| **JetBrains Junie** *(soft probe)* | `npx skills add HUI/next-token -a junie` | No |
-| **Qoder** *(soft probe)* | `npx skills add HUI/next-token -a qoder` | No |
-| **Google Antigravity** *(soft probe)* | `npx skills add HUI/next-token -a antigravity` | No |
+| **Claude Code** | `claude plugin marketplace add everything-ok/next-token && claude plugin install hui@hui` | Yes |
+| **Gemini CLI** | `gemini extensions install https://github.com/everything-ok/next-token` | Yes |
+| **opencode** | `node bin/install.js --only opencode` *(or `npx -y next-token-hui -- --only opencode`)* | Yes (plugin + AGENTS.md) |
+| **OpenClaw** | `npx -y next-token-hui -- --only openclaw` | Yes (workspace skill + SOUL.md) |
+| **Hermes Agent** | `npx -y next-token-hui -- --only hermes` *(or `node bin/install.js --only hermes` from a clone)* | Yes (native skills, enabled on load) |
+| **Codex CLI** | `npx skills add everything-ok/next-token -a codex` | Per-session: `/hui` |
+| **Cursor** | `npx skills add everything-ok/next-token -a cursor` | Per-session by default; `--with-init` for an always-on rule file |
+| **Windsurf** | `npx skills add everything-ok/next-token -a windsurf` | Per-session by default; `--with-init` for an always-on rule file |
+| **Cline** | `npx skills add everything-ok/next-token -a cline` | Per-session by default; `--with-init` for an always-on rule file |
+| **GitHub Copilot** *(soft probe)* | `npx -y next-token-hui -- --only copilot --with-init` | Repo-wide instructions via `--with-init` |
+| **Continue** | `npx skills add everything-ok/next-token -a continue` | No — say `/hui` |
+| **Kilo Code** | `npx skills add everything-ok/next-token -a kilo` | No |
+| **Roo Code** | `npx skills add everything-ok/next-token -a roo` | No |
+| **Augment Code** | `npx skills add everything-ok/next-token -a augment` | No |
+| **Aider Desk** | `npx skills add everything-ok/next-token -a aider-desk` | No |
+| **Sourcegraph Amp** | `npx skills add everything-ok/next-token -a amp` | No |
+| **IBM Bob** | `npx skills add everything-ok/next-token -a bob` | No |
+| **Crush** | `npx skills add everything-ok/next-token -a crush` | No |
+| **Devin (terminal)** | `npx skills add everything-ok/next-token -a devin` | No |
+| **Droid (Factory)** | `npx skills add everything-ok/next-token -a droid` | No |
+| **ForgeCode** | `npx skills add everything-ok/next-token -a forgecode` | No |
+| **Block Goose** | `npx skills add everything-ok/next-token -a goose` | No |
+| **iFlow CLI** | `npx skills add everything-ok/next-token -a iflow-cli` | No |
+| **Kiro CLI** | `npx skills add everything-ok/next-token -a kiro-cli` | No |
+| **Mistral Vibe** | `npx skills add everything-ok/next-token -a mistral-vibe` | No |
+| **OpenHands** | `npx skills add everything-ok/next-token -a openhands` | No |
+| **Qwen Code** | `npx skills add everything-ok/next-token -a qwen-code` | No |
+| **Atlassian Rovo Dev** | `npx skills add everything-ok/next-token -a rovodev` | No |
+| **Tabnine CLI** | `npx skills add everything-ok/next-token -a tabnine-cli` | No |
+| **Trae** | `npx skills add everything-ok/next-token -a trae` | No |
+| **Warp** | `npx skills add everything-ok/next-token -a warp` | No |
+| **Replit Agent** | `npx skills add everything-ok/next-token -a replit` | No |
+| **JetBrains Junie** *(soft probe)* | `npx skills add everything-ok/next-token -a junie` | No |
+| **Qoder** *(soft probe)* | `npx skills add everything-ok/next-token -a qoder` | No |
+| **Google Antigravity** *(soft probe)* | `npx skills add everything-ok/next-token -a antigravity` | No |
 
 "Soft probe" = installer won't auto-detect these without `--only <id>` because there's no reliable always-on signal (Copilot subscription state is auth-gated; the others have no CLI / config-dir-only). Pass the flag when you want them.
 
@@ -111,7 +111,7 @@ For "auto-activates? No" agents, type `/hui` once per session (or use natural-la
 bash install.sh --list             # macOS / Linux / WSL, from a local clone
 pwsh install.ps1 --list            # Windows / PowerShell, from a local clone
 node bin/install.js --list         # any platform, from a local clone
-npx -y next-token -- --list   # no clone needed
+npx -y next-token-hui -- --list   # no clone needed
 ```
 
 Each row prints the agent id, profile slug (where applicable), and whether it was auto-detected on your machine. Full agent matrix (with detection rules) is also defined in `bin/install.js` under the `PROVIDERS` array.
@@ -122,7 +122,7 @@ If you'd rather see exactly what runs:
 
 ```bash
 # Clone into explicit HUI directory
-git clone https://github.com/HUI/next-token.git hui
+git clone https://github.com/everything-ok/next-token.git hui
 cd hui
 
 # Preview every command the installer would run
@@ -171,7 +171,7 @@ For agents without a hook system (Cursor, Windsurf, Cline, Copilot, and friends)
 node bin/install.js --with-init
 
 # Or pull the rule body straight in (manual)
-curl -fsSL https://raw.githubusercontent.com/HUI/next-token/main/src/rules/hui-activate.md \
+curl -fsSL https://raw.githubusercontent.com/everything-ok/next-token/main/src/rules/hui-activate.md \
   > .cursor/rules/hui.mdc   # or .windsurf/rules/hui.md, .clinerules/hui.md, .github/copilot-instructions.md
 ```
 
@@ -207,7 +207,7 @@ Statusline should show `[HUI]` (orange) at bottom of Claude Code while mode is a
 ## Uninstall
 
 ```bash
-npx -y next-token -- --uninstall
+npx -y next-token-hui -- --uninstall
 ```
 
 What it removes:
@@ -234,7 +234,7 @@ Open your agent in this repo and say:
 
 Agent read repo. Agent run install. Hui make agent talk less — agent first job is install hui to talk less. Snake eat tail.
 
-Still broken? [Open an issue](https://github.com/HUI/next-token/issues).
+Still broken? [Open an issue](https://github.com/everything-ok/next-token/issues).
 
 **"I ran the installer but Claude Code isn't talking hui."**
 
@@ -289,4 +289,4 @@ No telemetry. No analytics. Run from a clone or via npx, the installer's own cod
 
 ---
 
-Stuck? Open an issue: <https://github.com/HUI/next-token/issues>
+Stuck? Open an issue: <https://github.com/everything-ok/next-token/issues>

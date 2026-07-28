@@ -5,8 +5,8 @@
 # you'd pass to bin/install.js can be passed here; we just forward them.
 #
 # One-line install:
-#   curl -fsSL https://raw.githubusercontent.com/HUI/next-token/main/install.sh | bash
-#   curl -fsSL https://raw.githubusercontent.com/HUI/next-token/main/install.sh | bash -s -- --all
+#   curl -fsSL https://raw.githubusercontent.com/everything-ok/next-token/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/everything-ok/next-token/main/install.sh | bash -s -- --all
 #
 # Local clone:
 #   bash install.sh [flags]
@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-REPO="next-token"
+REPO="next-token-hui"
 
 # Require Node ≥18. nvm is a common path; print a hint if missing.
 if ! command -v node >/dev/null 2>&1; then

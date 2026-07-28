@@ -2,49 +2,49 @@
   "version": 1,
   "skills": {
     "hui": {
-      "source": "HUI/next-token",
+      "source": "everything-ok/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui/SKILL.md",
       "computedHash": "9831a8956d0da747ceb58269cda3ea1d567324058f44be09629636824e465fe1"
     },
     "hui-commit": {
-      "source": "HUI/next-token",
+      "source": "everything-ok/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-commit/SKILL.md",
       "computedHash": "73c108fcdb493403ad0113365795e9cf61f86cd970f3e77dcaacc579efcba8a0"
     },
     "hui-compress": {
-      "source": "HUI/next-token",
+      "source": "everything-ok/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-compress/SKILL.md",
       "computedHash": "2e61b219a3c347ae9bbdeb5af18d0299fc03b68358d9186f8708ebcd9238bf51"
     },
     "hui-constraints": {
-      "source": "HUI/next-token",
+      "source": "everything-ok/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-constraints/SKILL.md",
       "computedHash": "67d55908861c3b08f9968cfa41ed874912bef19b2fd0f7253d37c1fae4fa09b5"
     },
     "hui-help": {
-      "source": "HUI/next-token",
+      "source": "everything-ok/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-help/SKILL.md",
-      "computedHash": "fa6695ff7edc8fbab294d9bba9038d42dce0a8b2fefcfbaa001c9b83cdfc7f72"
+      "computedHash": "0f79051ca3d3275dbf7871cd843ff39c52cf93d1269b8f2c72e7c68c63feb7b4"
     },
     "hui-review": {
-      "source": "HUI/next-token",
+      "source": "everything-ok/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-review/SKILL.md",
       "computedHash": "75b99aabce4b59bbea0b3e282678433ab8a5de280ce14831ad39e76aa07553ed"
     },
     "hui-stats": {
-      "source": "HUI/next-token",
+      "source": "everything-ok/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-stats/SKILL.md",
       "computedHash": "8243ff49b0628a92a5ff7e90491b5c80aa0252e584b464863bac7d155d3fd0b0"
     },
     "huicrew": {
-      "source": "HUI/next-token",
+      "source": "everything-ok/next-token",
       "sourceType": "github",
       "skillPath": "skills/huicrew/SKILL.md",
       "computedHash": "de038609c8f376f1bcba8c5a22696b6e171319b621985a3742d6bb6695e87cb5"

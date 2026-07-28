@@ -5,7 +5,7 @@
 // Usage:
 //   node src/tools/hui-init.js [target-dir] [--dry-run] [--force] [--only <agent>]
 //   node src/tools/hui-init.js [target-dir] --check-conflicts [--json] [--only <agent>]
-//   curl -fsSL https://raw.githubusercontent.com/HUI/next-token/main/src/tools/hui-init.js | node - [args]
+//   curl -fsSL https://raw.githubusercontent.com/everything-ok/next-token/main/src/tools/hui-init.js | node - [args]
 //
 // Without args, runs in cwd. Generates the rule files for Cursor, Windsurf,
 // Cline, Copilot, and AGENTS.md. Does NOT modify CLAUDE.md or compress

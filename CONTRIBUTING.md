@@ -171,8 +171,8 @@ Set `package.json` version, then create matching tag `v<version>`. Push tag and 
 After publish, verify clean install:
 
 ```bash
-npx -y next-token@<version> -- --help
-npx -y next-token@<version> -- --dry-run --all --non-interactive
+npx -y next-token-hui@<version> -- --help
+npx -y next-token-hui@<version> -- --dry-run --all --non-interactive
 ```
 
 ---

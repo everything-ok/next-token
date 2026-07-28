@@ -30,8 +30,8 @@
 // as named plugin-hook keys. 'session.created' is an event *type* dispatched
 // through the single `event` handler; the old direct-key handlers were
 // silently ignored. See:
-// https://github.com/HUI/next-token/issues/418
-// https://github.com/HUI/next-token/issues/421
+// https://github.com/everything-ok/next-token/issues/418
+// https://github.com/everything-ok/next-token/issues/421
 
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';

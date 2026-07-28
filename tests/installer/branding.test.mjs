@@ -10,7 +10,7 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..', '..');
 const WORKSPACE = path.resolve(ROOT, '..');
 const PACKAGE = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
-const REPOSITORY = 'HUI/next-token';
+const REPOSITORY = 'everything-ok/next-token';
 const SKILLS = ['hui', 'hui-commit', 'hui-compress', 'hui-constraints', 'hui-help', 'hui-review', 'hui-stats', 'huicrew'];
 
 function read(relative) {
@@ -33,7 +33,7 @@ function run(args) {
 }
 
 test('HUI product and next-token distribution contract', () => {
-  assert.equal(PACKAGE.name, 'next-token');
+  assert.equal(PACKAGE.name, 'next-token-hui');
   assert.equal(PACKAGE.bin['next-token'], 'bin/install.js');
   assert.equal(PACKAGE.bin.hui, 'bin/install.js');
   assert.match(PACKAGE.description, /HUI/i);
@@ -52,8 +52,8 @@ test('installer help identifies HUI and next-token without npm hui claim', () =>
   const result = run(['--help']);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /HUI installer/);
-  assert.match(result.stdout, /npm distribution: next-token/);
-  assert.match(result.stdout, /npx -y next-token/);
+  assert.match(result.stdout, /npm distribution: next-token-hui/);
+  assert.match(result.stdout, /npx -y next-token-hui/);
   assert.doesNotMatch(result.stdout, /npx -y hui(?:\s|$)/);
 });
 

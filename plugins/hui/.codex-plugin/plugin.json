@@ -6,8 +6,8 @@
     "name": "HUI Contributors",
     "url": "https://github.com/HUI"
   },
-  "homepage": "https://github.com/HUI/next-token",
-  "repository": "https://github.com/HUI/next-token",
+  "homepage": "https://github.com/everything-ok/next-token",
+  "repository": "https://github.com/everything-ok/next-token",
   "license": "MIT",
   "keywords": [
     "productivity",
@@ -25,9 +25,9 @@
     "capabilities": [
       "Write"
     ],
-    "websiteURL": "https://github.com/HUI/next-token",
-    "privacyPolicyURL": "https://github.com/HUI/next-token/blob/main/README.md",
-    "termsOfServiceURL": "https://github.com/HUI/next-token/blob/main/LICENSE",
+    "websiteURL": "https://github.com/everything-ok/next-token",
+    "privacyPolicyURL": "https://github.com/everything-ok/next-token/blob/main/README.md",
+    "termsOfServiceURL": "https://github.com/everything-ok/next-token/blob/main/LICENSE",
     "defaultPrompt": [
       "Use hui mode. Cut filler. Keep technical accuracy."
     ],

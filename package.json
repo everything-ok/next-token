@@ -1,16 +1,16 @@
 {
-  "name": "next-token",
-  "version": "1.1.0",
-  "description": "HUI installer — published on npm as next-token; installs HUI for AI coding agents.",
+  "name": "next-token-hui",
+  "version": "1.1.1",
+  "description": "HUI installer — published on npm as next-token-hui; installs HUI for AI coding agents.",
   "license": "MIT",
   "author": "HUI Contributors",
-  "homepage": "https://github.com/HUI/next-token",
+  "homepage": "https://github.com/everything-ok/next-token",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HUI/next-token.git"
+    "url": "git+https://github.com/everything-ok/next-token.git"
   },
   "bugs": {
-    "url": "https://github.com/HUI/next-token/issues"
+    "url": "https://github.com/everything-ok/next-token/issues"
   },
   "bin": {
     "next-token": "bin/install.js",

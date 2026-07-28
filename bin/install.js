@@ -8,7 +8,7 @@
 //
 // Distribution:
 //   Local clone: node bin/install.js [flags]
-//   curl|bash:   delegated from install.sh shim → npx -y next-token -- [flags]
+//   curl|bash:   delegated from install.sh shim → npx -y next-token-hui -- [flags]
 //   Windows:     pwsh install.ps1 [flags] → same npx delegation
 //
 // Pure stdlib, zero npm runtime deps.
@@ -1349,9 +1349,16 @@ function uninstall(ctx) {
     if (prunedHermes) ok('  pruned hui skills from Hermes');
   }
 
-  // Flag file
+  // Flag file + runtime state files hui writes under configDir. The active
+  // flag is the install marker; .prev/.history/.mode-log are runtime artifacts
+  // mode-tracker/hui-stats produce. All removed on uninstall so a clean
+  // uninstall leaves no hui-owned files behind.
   const flag = path.join(configDir, '.hui-active');
   if (fs.existsSync(flag) && !opts.dryRun) { try { fs.unlinkSync(flag); } catch (_silent) {} }
+  for (const name of ['.hui-active.prev', '.hui-history.jsonl', '.hui-mode-log.jsonl']) {
+    const p = path.join(configDir, name);
+    if (fs.existsSync(p) && !opts.dryRun) { try { fs.unlinkSync(p); } catch (_silent) {} }
+  }
 
   process.stdout.write('\n');
   ok('uninstall done.');

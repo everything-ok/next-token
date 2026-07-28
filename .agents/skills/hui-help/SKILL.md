@@ -75,8 +75,8 @@ Resolution: env var > config file > `full`.
 
 ## Product and Distribution
 
-**HUI** is product name: plugins, skills, `/hui`, hooks, statusline, and global `hui` command. **`next-token`** is npm distribution name. Install with `npx -y next-token -- ...`; do not assume npm package `hui` exists.
+**HUI** is product name: plugins, skills, `/hui`, hooks, statusline, and global `hui` command. **`next-token-hui`** is npm distribution name. Install with `npx -y next-token-hui -- ...`; do not assume npm package `hui` exists.
 
 ## More
 
-Full docs: https://github.com/HUI/next-token
+Full docs: https://github.com/everything-ok/next-token
