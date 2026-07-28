@@ -29,13 +29,23 @@ jobs:
           import hashlib
           from pathlib import Path
           hooks = Path('src/hooks')
-          manifest = dict(
-              line.split(maxsplit=1)
-              for line in (hooks / 'checksums.sha256').read_text().splitlines()
-              if line.strip()
-          )
+          # checksums.sha256 is "<digest>  <name>" per line; build {name: digest}
+          # so the loop below keys on the FILENAME, not the hex digest (a prior
+          # dict() form reversed these and tried to read a file named after the
+          # digest → FileNotFoundError). Normalize CRLF→LF before hashing so the
+          # check holds on both LF (CI) and CRLF (Windows local) checkouts — the
+          # committed manifest stores LF digests, same as release_preflight.py.
+          def _lf(b):
+              return b.replace(b'\r\n', b'\n').replace(b'\r', b'\n')
+          manifest = {}
+          for line in (hooks / 'checksums.sha256').read_text().splitlines():
+            line = line.strip()
+            if not line:
+              continue
+            digest, name = line.split(maxsplit=1)
+            manifest[name] = digest
           for name, digest in manifest.items():
-              actual = hashlib.sha256((hooks / name).read_bytes()).hexdigest()
+              actual = hashlib.sha256(_lf((hooks / name).read_bytes())).hexdigest()
               if actual != digest:
                   raise SystemExit(f'checksum mismatch: {name}')
           print('Tagged checkout checksum manifest verified')
