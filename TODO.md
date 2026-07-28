@@ -1,6 +1,6 @@
 # HUI：功能、使用、验证与路线图
 
-> 面向 AI coding agent 的 focused technical-work toolkit。npm 包名：`next-token`；产品与命令名：`HUI` / `hui`。
+> 面向 AI coding agent 的 focused technical-work toolkit。npm 包名：`next-token-hui`；产品与命令名：`HUI` / `hui`；源码仓库：`everything-ok/next-token`。
 
 ## 1. 产品契约
 
@@ -50,34 +50,94 @@ node bin/install.js --list
 
 ### 安装器
 
-先预览后写入：
+先预览后写入（npm 包名 `next-token-hui`）：
 
 ```bash
-npx -y next-token -- --dry-run --all
-npx -y next-token -- --all
+npx -y next-token-hui -- --dry-run --all
+npx -y next-token-hui -- --all
+```
 
-# 源码目录
+一键安装（自动检测已装 agent）：
+
+```bash
+npx -y next-token-hui
+```
+
+curl/irm 一行安装（thin shim，转发到 `bin/install.js`）：
+
+```bash
+# macOS / Linux / WSL / Git Bash
+curl -fsSL https://raw.githubusercontent.com/everything-ok/next-token/main/install.sh | bash
+
+# Windows PowerShell 5.1+
+irm https://raw.githubusercontent.com/everything-ok/next-token/main/install.ps1 | iex
+```
+
+全局安装后直接用 `hui`：
+
+```bash
+npm install -g next-token-hui
+hui --help
+```
+
+源码目录（clone 后）：
+
+```bash
 node bin/install.js --list
 node bin/install.js --doctor
 node bin/install.js --with-init --dry-run
 node src/tools/hui-init.js . --check-conflicts --json
 ```
 
-### 常用命令
+常用 flags：
+
+| flag | 作用 |
+|---|---|
+| `--all` | hooks + 每仓库 init 规则文件 |
+| `--only <agent>` | 只装指定 agent（见 `--list`） |
+| `--with-hooks` | 强制装 Claude Code standalone hooks |
+| `--with-init` | 在当前仓库写 IDE 规则文件 |
+| `--minimal` | 只装插件/扩展，不装 hooks |
+| `--with-mcp-shrink="<上游命令>"` | 注册 hui-shrink MCP 代理（需带上游） |
+| `--dry-run` | 只打印不执行 |
+| `--non-interactive` | 不交互，用默认值 |
+| `--config-dir <路径>` | 指定配置目录（默认 `~/.claude`） |
+| `--doctor` | 诊断 node/npm/hooks/plugin 状态（只读） |
+| `--migrate-from-hui [--force]` | 修复旧的 standalone 安装 |
+
+### 卸载
+
+```bash
+npx -y next-token-hui -- --uninstall          # 预览加 --dry-run
+hui --uninstall                                # 全局安装后
+```
+
+卸载会清理：`~/.claude/hooks/` 下的 hui hook 文件、`settings.json` 里的 hui hook/statusline 接线、`claude plugin uninstall hui` 与 `claude mcp remove hui-shrink`，以及运行期状态文件（`.hui-active` / `.hui-active.prev` / `.hui-history.jsonl` / `.hui-mode-log.jsonl`）。`--only` 装的 IDE skill 需在对应 IDE 的 skill 管理器移除；`--with-init` 写的每仓库文件（`.cursor/`、`.windsurf/`、`AGENTS.md` 等）需手动删。
+
+### 常用命令（Claude Code 内）
 
 ```text
 /hui                    显式启用默认 full 模式
 /hui lite|full|ultra     切换表达强度
 /hui wenyan              切换文言模式
-/hui off                 停用持久模式
+/hui off                 停用持久模式（或说 "stop hui" / "normal mode"）
 /hui-constraints         查看 evidence-first 约束摘要
 /hui-commit              生成提交文案
 /hui-review              生成单条审查 finding
 /hui-compress notes.md   改写受支持的自然语言文件
-/hui-session [--compact] Claude Code 本地 transcript 操作
-/hui-stats [--all]       Claude Code 本地 usage 观察
+/hui-session [--compact] Claude Code 本地 transcript 操作（不改原始 transcript）
+/hui-stats [--all] [--since 7d]  Claude Code 本地 usage 观察
 /hui-init --dry-run      预览项目规则初始化
+/hui-help                帮助
 ```
+
+诊断（终端，非会话内）：
+
+```bash
+npx -y next-token-hui -- --doctor            # 机器可读加 --json
+npx -y next-token-hui -- --migrate-from-hui --force   # 修复旧 standalone 安装
+```
+
 
 - `/hui on` 保持兼容：启用默认模式。
 - `/hui on <未知值>` 或 `/hui mode <未知值>` 不改变已有模式；应改用列出的合法强度。
@@ -157,7 +217,7 @@ npm publish --dry-run --access public # 仅预演包内容与 npm publish 流程
 
 ## 9. 发布决策记录
 
-当前 npm package：`next-token`，版本以 [`package.json`](package.json) 为准；Node.js 要求 `>=18`，公开包使用 `publishConfig.access: public`。
+当前 npm package：`next-token-hui`，版本以 [`package.json`](package.json) 为准；Node.js 要求 `>=18`，公开包使用 `publishConfig.access: public`；源码仓库 `everything-ok/next-token`，发布 tag 为 `v<version>`，远程 hook 资产从该 tag 拉取并对照 `src/hooks/checksums.sha256` 校验。
 
 受支持发布流程：
 
@@ -167,4 +227,9 @@ npm publish --dry-run --access public # 仅预演包内容与 npm publish 流程
 4. 由有权限的维护者发布 GitHub Release。
 5. 审批 GitHub `npm-publish` protected environment；workflow 通过 npm Trusted Publishing/OIDC 以 provenance 发布并 smoke-test 精确版本。
 
-未登录 GitHub 时，无法创建/发布 Release 或审批 protected environment，因此**无法完成项目规定的实际 npm 发版**。本地直接 `npm publish` 只可能在操作者已 npm 登录、拥有 `next-token` 发布授权、符合组织/2FA/provenance 策略且获得显式批准绕过 GitHub/OIDC 流程时进行；它是不可逆外部动作，不会自动执行。
+本地直接 `npm publish`（账号开启 2FA 时需 `--otp=<code>` 或浏览器授权）只在操作者已 npm 登录、拥有 `next-token-hui` 发布授权、符合组织/2FA/provenance 策略且获得显式批准绕过 GitHub/OIDC 流程时进行；它是不可逆外部动作，不会自动执行。
+
+### 发布历史
+
+- `1.1.1`（2026-07-28）：修复 `1.1.0` 端到端验证发现的两个致命 bug——standalone hook 因 `require('../hui-command-parser')` 加载即崩（内联 parser 自洽）；GitHub 仓库 `HUI/next-token` 404 致 plugin 安装与 integrity fetch 失败（统一指向 `everything-ok/next-token`）。同时统一 npm 包名 `next-token-hui`（shim/docs/skills）、`uninstall` 清理运行期状态文件、重算 `checksums.sha256` 与 skill 镜像、补 e2e hook 实跑 + uninstall 状态文件 + parser 同步性回归测试。
+- `1.1.0`（首发）：HUI installer 统一 Node 脚本、canonical skills、hooks/statusline、provider matrix。
