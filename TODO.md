@@ -116,20 +116,26 @@ hui --uninstall                                # 全局安装后
 
 ### 常用命令（Claude Code 内）
 
+> 注意：`hui`（终端命令）与 `/hui`（会话 slash 命令）是两件事。`hui` 终端命令只在 `npm install -g next-token-hui` 全局安装后可用；`npx -y next-token-hui` 是一次性运行，不注册 `hui` 命令。`/hui` 等 slash 命令在 Claude Code 会话内、安装 plugin 后即可用，与全局安装无关。
+
 ```text
 /hui                    显式启用默认 full 模式
 /hui lite|full|ultra     切换表达强度
-/hui wenyan              切换文言模式
+/hui wenyan              切换文言模式（含 wenyan-lite / wenyan-ultra / wenyan-full）
 /hui off                 停用持久模式（或说 "stop hui" / "normal mode"）
+/hui on <level>          兼容写法，如 /hui on ultra
 /hui-constraints         查看 evidence-first 约束摘要
-/hui-commit              生成提交文案
-/hui-review              生成单条审查 finding
-/hui-compress notes.md   改写受支持的自然语言文件
+/hui-commit              生成提交文案（独立模式，下一句普通 prompt 自动回到原 prose 模式）
+/hui-review              生成单条审查 finding（独立模式，同上）
+/hui-compress notes.md   改写受支持的自然语言文件（独立模式，同上）
 /hui-session [--compact] Claude Code 本地 transcript 操作（不改原始 transcript）
 /hui-stats [--all] [--since 7d]  Claude Code 本地 usage 观察
 /hui-init --dry-run      预览项目规则初始化
 /hui-help                帮助
+/hui demo                本地固定文本示例，不调用模型、不读写会话状态
 ```
+
+旧别名仍可用：`/hui-lite`、`/hui-ultra`、`/hui-global`(=full)、`/hui:hui <...>`(marketplace namespace 形式)；自然语言 `hui mode` / `talk like hui` / `activate hui` 也能触发。
 
 诊断（终端，非会话内）：
 
@@ -137,6 +143,52 @@ hui --uninstall                                # 全局安装后
 npx -y next-token-hui -- --doctor            # 机器可读加 --json
 npx -y next-token-hui -- --migrate-from-hui --force   # 修复旧 standalone 安装
 ```
+
+## 4.5 命令验证矩阵（1.1.1 实测）
+
+> 以下命令均在隔离 `$CLAUDE_CONFIG_DIR`（不影响真实 `~/.claude`）下、`next-token-hui@1.1.1` 全程实测通过。会话 slash 命令通过真实执行 `hui-mode-tracker.js` hook（喂 `{prompt:"/..."}` JSON on stdin）验证，非静态检查。每条记 flag 写入结果与退出码。
+
+### 终端 CLI（全局 `npm install -g next-token-hui` 后）
+
+| 命令 | 期望 | 结果 |
+|---|---|---|
+| `hui --help` | 输出用法，exit 0 | ✅ |
+| `hui --list` / `--list --json` | 35 providers，JSON 可解析 | ✅ |
+| `hui --doctor` | all checks passed | ✅ |
+| `hui --migrate-from-hui` | 干净时报 "no migration actions needed" | ✅ |
+| `hui --dry-run --all` | 只打印不写盘 | ✅ |
+| `hui --only claude --with-hooks` | 装 plugin + hooks | ✅ |
+| `hui --uninstall` | hooks/settings/状态文件/plugin 全清 | ✅ |
+| 重复装（幂等） | SessionStart hook 数 = 1，不重复 | ✅ |
+
+### 会话 slash 命令（通过 hook 实跑）
+
+| 命令 | flag 写入 | exit |
+|---|---|---|
+| `/hui` | full | 0 |
+| `/hui lite` / `/hui full` / `/hui ultra` | lite / full / ultra | 0 |
+| `/hui wenyan` / `wenyan-lite` / `wenyan-ultra` / `wenyan-full` | 对应值（wenyan-full→wenyan） | 0 |
+| `/hui off` / `stop-hui` | flag 删除 | 0 |
+| `/hui:hui lite`（marketplace namespace） | lite | 0 |
+| `/hui-lite` / `/hui-ultra` / `/hui-global`（legacy） | lite / ultra / full | 0 |
+| `hui mode`（自然语言） | full | 0 |
+| `/hui on ultra` | ultra | 0 |
+| `/hui-commit` / `/hui-review` / `/hui-compress` | 独立模式 + **prev restore 正确**（下句普通 prompt 回到原 prose 模式） | 0 |
+| `/hui demo` | 本地文本示例，不调模型 | 0 |
+| `/hui bogus`（非法参数） | 保持原 mode 不变 | 0 |
+| `/hui-stats` / `--all` / `--since 7d` | 无会话/无记录时正确报错 | 0 |
+| `/hui-session` / `--compact` | 无 transcript 正确 block | 0 |
+| `/hui-help` / `/hui-init` | 走 command 路径，不崩 | 0 |
+
+### 辅助验证
+
+| 项 | 结果 |
+|---|---|
+| 15 个 slash 命令 toml manifest（`tomllib` 真解析） | ✅ 15/15 合法 |
+| SessionStart hook `hui-activate.js` | ✅ 输出规则 |
+| statusline（随 mode 变徽章：`[HUI:ULTRA]` 等） | ✅ |
+| 卸载清理 `.hui-active` / `.prev` / `.history` / `.mode-log` / plugin | ✅ 全清 |
+
 
 
 - `/hui on` 保持兼容：启用默认模式。
