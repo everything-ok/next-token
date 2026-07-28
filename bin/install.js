@@ -1228,11 +1228,18 @@ function uninstall(ctx) {
       note('  claude plugin not installed — skipping');
     }
 
-    // hui-shrink MCP — only run if `claude mcp` subcommand exists. Tolerate
-    // non-zero exit (server may have never been registered).
+    // hui-shrink MCP — only run if `claude mcp` subcommand exists. Probe
+    // `mcp list` first so a machine where hui-shrink was never registered
+    // (the common case — it's opt-in) doesn't print "No MCP server named
+    // hui-shrink" stderr noise. Mirrors the plugin probe above.
     const mcpHelp = captureSpawn('claude', ['mcp', '--help']);
     if (mcpHelp.status === 0) {
-      runSpawn('claude', ['mcp', 'remove', 'hui-shrink'], null, opts.dryRun);
+      const mcpProbe = captureSpawn('claude', ['mcp', 'list']);
+      if (mcpProbe.status === 0 && /hui-shrink/i.test(mcpProbe.stdout || '')) {
+        runSpawn('claude', ['mcp', 'remove', 'hui-shrink'], null, opts.dryRun);
+      } else {
+        note('  hui-shrink MCP not registered — skipping');
+      }
     }
   }
 
