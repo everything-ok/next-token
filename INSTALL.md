@@ -14,11 +14,16 @@ If just want it to work, run the one-liner. If want to know what gets touched, s
 
 ## npm install
 
+Two distinct things share the name "hui":
+
+- **`hui` terminal command** — the npm package's bin. Available only after a **global** install (`npm install -g next-token-hui`). `npx -y next-token-hui` runs the installer but does not register the `hui` command — `npx` is a one-shot runner.
+- **`/hui` slash command** — a Claude Code session command (switches mode: `/hui lite`, `/hui full`, etc.). Works inside a Claude Code session after install; no global install needed.
+
 ```bash
-# Run latest public package without global install
+# Run latest public package without global install (no `hui` command registered)
 npx -y next-token-hui -- --help
 
-# Install HUI command globally
+# Install HUI command globally (gives you the `hui` terminal command)
 npm install -g next-token-hui
 hui --help
 

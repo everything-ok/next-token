@@ -19,13 +19,15 @@ After first npm release, install with:
 npx -y next-token-hui -- --help
 npx -y next-token-hui -- --dry-run --all
 
-# Install command globally
+# Install command globally (gives you the `hui` terminal command)
 npm install -g next-token-hui
 hui --help
 
 # Pin exact release for reproducible installation
 npx -y next-token-hui@<version> -- --dry-run --all
 ```
+
+> `npx -y next-token-hui` runs the installer but does **not** install the `hui` terminal command — `npx` is a one-shot runner. To type `hui` directly in your terminal, install globally with `npm install -g next-token-hui` first. This is separate from the Claude Code `/hui` slash command, which works inside a Claude Code session after install (no global install needed for that).
 
 After global installation, use brand command:
 
