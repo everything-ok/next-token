@@ -44,5 +44,5 @@ jobs:
           version="${PACKAGE_VERSION#v}"
           mkdir smoke
           cd smoke
-          npx -y "next-token@${version}" -- --help
-          npx -y "next-token@${version}" -- --dry-run --all --non-interactive
+          npx -y "next-token-hui@${version}" -- --help
+          npx -y "next-token-hui@${version}" -- --dry-run --all --non-interactive
