@@ -11,7 +11,7 @@ const ROOT = path.resolve(HERE, '..', '..');
 const WORKSPACE = path.resolve(ROOT, '..');
 const PACKAGE = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'));
 const REPOSITORY = 'everything-ok/next-token';
-const SKILLS = ['hui', 'hui-commit', 'hui-compress', 'hui-constraints', 'hui-help', 'hui-review', 'hui-stats', 'huicrew'];
+const SKILLS = ['hui', 'hui-commit', 'hui-compress', 'hui-constraints', 'hui-help', 'hui-review', 'hui-stats', 'huicrew', 'hui-tdd'].sort();
 
 function read(relative) {
   return fs.readFileSync(path.join(ROOT, relative), 'utf8');

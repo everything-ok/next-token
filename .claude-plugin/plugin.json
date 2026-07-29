@@ -29,6 +29,18 @@
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/src/hooks/hui-guard.js\"",
+            "timeout": 5,
+            "statusMessage": "HUI guard..."
+          }
+        ]
+      }
     ]
   }
 }

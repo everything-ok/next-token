@@ -55,6 +55,7 @@ const HOOK_FILES = [
   'hui-statusline.ps1',
   'huicrew-model-overrides.js',
   'hui-session.js',
+  'hui-guard.js',
 ];
 
 // ── Argv ───────────────────────────────────────────────────────────────────
@@ -625,7 +626,7 @@ function installViaSkills(ctx, prov) {
 
 // ── hermes native install ──────────────────────────────────────────────────
 // Drops the hui skills into ~/.hermes/skills/productivity/ (or HERMES_HOME if set).
-const HERMES_SKILL_DIRS = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'hui-constraints', 'huicrew'];
+const HERMES_SKILL_DIRS = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'hui-constraints', 'huicrew', 'hui-tdd'];
 
 function hermesConfigDir() {
   // Hermes uses ~/.hermes by default, or HERMES_HOME env var.
@@ -686,7 +687,7 @@ function installHermes(ctx) {
 // opencode.json with a "plugin" array entry. Mirrors the Claude Code hook
 // architecture as closely as opencode allows — only the statusline is missing
 // (opencode's TUI exposes no plugin-writable badge).
-const OPENCODE_SKILL_DIRS  = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'hui-constraints', 'huicrew'];
+const OPENCODE_SKILL_DIRS  = ['hui', 'hui-commit', 'hui-review', 'hui-help', 'hui-stats', 'hui-compress', 'hui-constraints', 'huicrew', 'hui-tdd'];
 const OPENCODE_AGENT_FILES = ['huicrew-investigator.md', 'huicrew-builder.md', 'huicrew-reviewer.md'];
 const OPENCODE_COMMAND_FILES = commandsFor('opencode').map(command => `${command.name}.md`);
 const OPENCODE_PLUGIN_REL = './plugins/hui/plugin.js';
@@ -951,7 +952,7 @@ async function installHooks(ctx) {
   if (opts.dryRun) {
     note(`  would mkdir -p ${hooksDir}`);
     for (const f of HOOK_FILES) note(`  would install ${path.join(hooksDir, f)}`);
-    note(`  would merge SessionStart + UserPromptSubmit + statusline into ${settingsPath}`);
+    note(`  would merge SessionStart + UserPromptSubmit + Stop + statusline into ${settingsPath}`);
     return 'ok';
   }
 
@@ -1008,6 +1009,7 @@ async function installHooks(ctx) {
   const node = absoluteNodePath();
   const activate = path.join(hooksDir, 'hui-activate.js');
   const tracker  = path.join(hooksDir, 'hui-mode-tracker.js');
+  const guard    = path.join(hooksDir, 'hui-guard.js');
   const statusline = path.join(hooksDir, 'hui-statusline.sh');
 
   // Migrate any legacy bare-`node` invocations of our managed scripts.
@@ -1025,6 +1027,18 @@ async function installHooks(ctx) {
     marker: 'hui-mode-tracker',
     timeout: 5,
     statusMessage: 'Tracking hui mode...',
+  });
+
+  // Stop hook — deterministic guard. Blocks when the assistant claims to have
+  // run/passed tests but no test command was executed this session. The plugin
+  // manifest wires the same script for the plugin path; this wires the
+  // standalone-hook fallback (only used when the plugin install did not
+  // succeed, same fallback logic as SessionStart/UserPromptSubmit above).
+  SETTINGS.addCommandHook(settings, 'Stop', {
+    command: `"${node}" "${guard}"`,
+    marker: 'hui-guard',
+    timeout: 5,
+    statusMessage: 'HUI guard...',
   });
 
   // Statusline — set if absent or already pointing at our script.
@@ -1518,12 +1532,13 @@ function doctor(opts, configDir) {
 
   const settingsPath = path.join(configDir, 'settings.json');
   const settings = SETTINGS.readSettings(settingsPath);
-  const hookState = { settingsReadable: !!settings, sessionStart: false, userPromptSubmit: false, statusline: false, duplicateManaged: 0 };
+  const hookState = { settingsReadable: !!settings, sessionStart: false, userPromptSubmit: false, stop: false, statusline: false, duplicateManaged: 0 };
   if (settings) {
     const hooks = settings.hooks || {};
-    const managedCount = (arr) => (arr || []).reduce((n, group) => n + (group.hooks || []).filter(h => typeof h.command === 'string' && /hui[-/]((activate)|(mode-tracker)|(stats))/.test(h.command)).length, 0);
+    const managedCount = (arr) => (arr || []).reduce((n, group) => n + (group.hooks || []).filter(h => typeof h.command === 'string' && /hui[-/]((activate)|(mode-tracker)|(stats)|(guard))/.test(h.command)).length, 0);
     if (hooks.SessionStart) hookState.sessionStart = managedCount(hooks.SessionStart) > 0;
     if (hooks.UserPromptSubmit) hookState.userPromptSubmit = managedCount(hooks.UserPromptSubmit) > 0;
+    if (hooks.Stop) hookState.stop = managedCount(hooks.Stop) > 0;
     if (settings.statusLine && typeof settings.statusLine.command === 'string' && /hui/.test(settings.statusLine.command)) hookState.statusline = true;
     const ss = managedCount(hooks.SessionStart);
     const ups = managedCount(hooks.UserPromptSubmit);
@@ -1576,6 +1591,7 @@ function printDoctorHuman(r) {
   const h = r.checks.claudeHooks;
   process.stdout.write(`${ok(h.sessionStart)} SessionStart hook\n`);
   process.stdout.write(`${ok(h.userPromptSubmit)} UserPromptSubmit hook\n`);
+  process.stdout.write(`${ok(h.stop)} Stop hook (hui-guard)\n`);
   process.stdout.write(`${ok(h.statusline)} statusline badge\n`);
   if (h.duplicateManaged) process.stdout.write(`  ! duplicate managed hooks (${h.duplicateManaged})\n`);
   const f = r.checks.activeFlag;

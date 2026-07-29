@@ -201,6 +201,7 @@ const MANAGED_HOOK_BASENAMES = new Set([
   'hui-stats.js',
   'hui-statusline.sh',
   'hui-statusline.ps1',
+  'hui-guard.js',
 ]);
 
 // Split a command into shell-ish tokens, honoring single/double quotes so a
