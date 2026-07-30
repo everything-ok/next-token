@@ -193,3 +193,19 @@ test('--update / -U flag is parsed and documented', () => {
   assert.equal(alias.status, 0, alias.stderr);
   assert.match(alias.stdout, /HUI update/);
 });
+
+test('--version / -V prints package name + version', () => {
+  // Help must document the flag.
+  const help = run('--help');
+  assert.equal(help.status, 0);
+  const collapsed = help.stdout.replace(/\s+/g, ' ');
+  assert.match(collapsed, /--version, -V/);
+  // Prints "next-token-hui <version>" and exits 0.
+  const r = run('--version');
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout.trim(), /^next-token-hui \d+\.\d+\.\d+$/);
+  // -V alias resolves the same way.
+  const alias = run('-V');
+  assert.equal(alias.status, 0, alias.stderr);
+  assert.match(alias.stdout.trim(), /^next-token-hui \d+\.\d+\.\d+$/);
+});

@@ -154,23 +154,28 @@ npx -y next-token-hui -- --update --dry-run      # 预览
 ```bash
 npx -y next-token-hui -- --doctor            # 机器可读加 --json
 npx -y next-token-hui -- --migrate-from-hui --force   # 修复旧 standalone 安装
+npx -y next-token-hui -- --version           # 显示包名 + 版本（-V 同）
 ```
 
-## 4.5 命令验证矩阵（1.2.0 实测）
+## 4.5 命令验证矩阵（1.2.2 实测）
 
-> 以下命令均在隔离 `$CLAUDE_CONFIG_DIR`（不影响真实 `~/.claude`）下、`next-token-hui@1.2.0` 全程实测通过。会话 slash 命令通过真实执行 `hui-mode-tracker.js` hook（喂 `{prompt:"/..."}` JSON on stdin）验证，非静态检查。每条记 flag 写入结果与退出码。1.2.0 新增硬守卫 `hui-guard.js`（Stop hook）与 `hui-tdd` skill，含真实 `claude -p` plugin 路径触发验证。
+> 以下命令均在隔离 `$CLAUDE_CONFIG_DIR`（不影响真实 `~/.claude`）下、本地 repo bin（含 1.2.2 改动，npm 待发）全程实测通过。会话 slash 命令通过真实执行 `hui-mode-tracker.js` hook（喂 `{prompt:"/..."}` JSON on stdin）验证，非静态检查。每条记 flag 写入结果与退出码。1.2.2 新增 `--version`/`-V`；1.2.0 起含硬守卫 `hui-guard.js`（Stop hook）与 `hui-tdd` skill。
 
 ### 终端 CLI（全局 `npm install -g next-token-hui` 后）
 
 | 命令 | 期望 | 结果 |
 |---|---|---|
-| `hui --help` | 输出用法，exit 0 | ✅ |
+| `hui --version` / `-V` | `next-token-hui 1.2.2`，exit 0 | ✅ |
+| `hui --help` | 含全部 flags 含 `--update`/`--version`，exit 0 | ✅ |
 | `hui --list` / `--list --json` | 35 providers，JSON 可解析 | ✅ |
-| `hui --doctor` | all checks passed | ✅ |
+| `hui --doctor` / `--doctor --json` | all checks passed（装后含 Stop hook 行），JSON 可解析 | ✅ |
 | `hui --migrate-from-hui` | 干净时报 "no migration actions needed" | ✅ |
 | `hui --dry-run --all` | 只打印不写盘 | ✅ |
-| `hui --only claude --with-hooks` | 装 plugin + hooks | ✅ |
+| `hui --only claude --with-hooks` | 装 plugin + hooks（含 hui-guard.js） | ✅ |
+| `hui --update` | 已装→`refreshing standalone hooks` + `update done`；保留 `.hui-active` | ✅ |
+| `hui --update --dry-run` | 打印 `HUI update` 计划，不写盘 | ✅ |
 | `hui --uninstall` | hooks/settings/状态文件/plugin 全清 | ✅ |
+| `hui --bogus`（非法） | `error: unknown flag`，exit 2 | ✅ |
 | 重复装（幂等） | SessionStart hook 数 = 1，不重复 | ✅ |
 
 ### 会话 slash 命令（通过 hook 实跑）
@@ -217,7 +222,7 @@ npx -y next-token-hui -- --migrate-from-hui --force   # 修复旧 standalone 安
 | 非 Stop 事件 | `hook_event_name:"SessionStart"` | ✅ 放行 |
 | **真实 `claude -p` plugin 路径** | 模型谎报测试 | ✅ Stop hook 触发，`Stop hook feedback` 注入会话强制纠正 |
 
-### token 压缩（1.2.0 实测）
+### token 压缩（1.2.2 实测）
 
 同一段啰嗦 AI 回复，HUI 压缩对照：
 
@@ -322,6 +327,7 @@ npm publish --dry-run --access public # 仅预演包内容与 npm publish 流程
 
 ### 发布历史
 
+- `1.2.2`（2026-07-30）：新增 `--version` / `-V` flag 打印包名+版本（之前 `hui --version` 报 unknown flag）。全 CLI 命令严格自测通过 12 项（--version/--help/--list/--doctor/--migrate/--dry-run/install/--update/uninstall/非法 flag/幂等）。重算 `skills-lock.json`（两份）与 `checksums.sha256` 修复 hash 漂移。
 - `1.2.1`（2026-07-29）：新增 `--update` / `-U` flag,一键升级已装的 HUI。`claude plugin update hui`(拉最新 marketplace;未装过则 fresh install)+ 重新 copy standalone hooks + 重接 settings.json(幂等)+ 重 add profile skills(Cursor/Windsurf/Codex 等)+ Gemini 重装。保留 `.hui-active` 当前模式不重置。支持 `--update --dry-run` / `--only <agent>` / `--skip-skills`。`unit.argv.test.mjs` 加解析 + 文档断言(19/19 pass)。重算 `skills-lock.json`(hui canonical hash 漂移修复)。
 - `1.2.0`（2026-07-29）：新增**硬守卫 + TDD**。`hui-guard.js` Stop hook 确定性拦截"谎报测试"——扫描最后一条 assistant 消息的强声称信号（I ran the tests / tests pass），反查本会话 transcript 有无 `npm test`/`jest`/`pytest`/`cargo test` 等工具调用，有声称无调用则 `decision:block` 强制 Claude 纠正。`hui-tdd` skill 补 prompt 级 TDD（RED-GREEN-REFACTOR）。安全：`stop_hook_active` 防循环、`HUI_GUARD=0` 杀手开关、5MB/10000 行 transcript 上限、拒 symlink、self-contained（无 `../` require）。8 回归用例 + 165 全套测试绿，真实会话验证 plugin 路径 Stop hook 触发。
 - `1.1.3`（2026-07-28）：`uninstall` 探测 `claude mcp list` 后才 `remove hui-shrink`，消除未注册时的 "No MCP server named hui-shrink" stderr 噪声。

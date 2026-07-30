@@ -66,7 +66,7 @@ function parseArgs(argv) {
     all: false, minimal: false, listOnly: false, noColor: false,
     only: [], uninstall: false, nonInteractive: false,
     configDir: null, help: false, doctor: false, json: false,
-    migrateFromHui: false, update: false,
+    migrateFromHui: false, update: false, version: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -117,6 +117,7 @@ function parseArgs(argv) {
       case '--doctor': opts.doctor = true; break;
       case '--migrate-from-hui': opts.migrateFromHui = true; break;
       case '--update': case '-U': opts.update = true; break;
+      case '--version': case '-V': opts.version = true; break;
       case '--json': opts.json = true; break;
       case '--non-interactive': opts.nonInteractive = true; break;
       case '-h': case '--help': opts.help = true; break;
@@ -1749,6 +1750,7 @@ FLAGS
                         claude plugin update + re-copy standalone hooks +
                         re-add skills. Run from a clone or via npx (which
                         fetches the new package version). --only <agent> scopes.
+  --version, -V         Print package name + version and exit.
   --json                With --doctor or --list, emit machine-readable JSON.
                         --list --json includes provider capability metadata.
   --config-dir <path>   Claude Code config dir for hook files + settings.json.
@@ -1777,6 +1779,7 @@ async function main() {
   const opts = parseArgs(process.argv.slice(2));
   const c = makeChalk(opts.noColor);
   if (opts.help) { printHelp(); return 0; }
+  if (opts.version) { process.stdout.write(`${NPM_PACKAGE_NAME} ${PACKAGE_VERSION}\n`); return 0; }
   if (opts.listOnly) { printList(opts.noColor, opts.json); return 0; }
 
   checkWslWindowsNode();
