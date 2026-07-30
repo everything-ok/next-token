@@ -55,3 +55,23 @@ See [INSTALL.md](INSTALL.md) for agent-specific installation, [TODO.md](TODO.md)
 Claude Code supports full HUI command lifecycle. `/hui` and `/hui-global` keep full compression active for future replies; they do not rewrite existing conversation history, context, or cache. `/hui-session --compact` creates validated sibling transcript copy and never modifies original Claude Code transcript.
 
 Gemini and OpenCode receive portable prompt commands. Hook-dependent `/hui-session` and `/hui-stats` remain Claude Code only until host adapters expose verified local transcript and session-log contracts.
+
+## Terminal CLI (`hui` / `npx -y next-token-hui`)
+
+All commands verified by strict self-test (isolated sandbox, 1.2.2). Global install gives the `hui` command; `npx -y next-token-hui` works without global install.
+
+| Command | What it does |
+|---|---|
+| `hui --version` / `-V` | Print package name + version |
+| `hui --help` | Usage + all flags (incl. `--update`, `--version`) |
+| `hui --list` / `--list --json` | Print provider matrix (35 agents) |
+| `hui --doctor` / `--doctor --json` | Diagnose node/npm/hooks/plugin/skills (read-only) |
+| `hui --migrate-from-hui [--force]` | Repair a stale standalone install |
+| `hui --dry-run --all` | Print the install plan, write nothing |
+| `hui --only claude --with-hooks` | Install plugin + standalone hooks (incl. `hui-guard.js`) |
+| `hui --update` / `-U` | One-command upgrade: `claude plugin update` + re-copy hooks + re-add skills; preserves active mode |
+| `hui --uninstall` / `-u` | Remove hooks/settings/state files/plugin |
+| `hui --bogus` (unknown) | Exit 2 with error |
+
+Session slash commands (inside Claude Code): `/hui`, `/hui lite\|full\|ultra\|wenyan[-lite\|-ultra\|-full]`, `/hui off`, `stop-hui`, `/hui-commit`, `/hui-review`, `/hui-compress`, `/hui-session [--compact]`, `/hui-stats [--all] [--since 7d]`, `/hui-init`, `/hui-help`, `/hui demo`, `/hui-constraints`, `/hui-tdd`. Legacy aliases `/hui-lite`, `/hui-ultra`, `/hui-global` and namespace `/hui:hui <...>` still work; natural-language `hui mode` / `talk like hui` / `activate hui` also trigger.
+
