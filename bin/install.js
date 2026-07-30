@@ -1439,12 +1439,24 @@ async function updateHui(ctx) {
     const probe = captureSpawn('claude', ['plugin', 'list']);
     const installed = probe.status === 0 && /hui/i.test(probe.stdout || '');
     if (installed) {
-      const r = runSpawn('claude', ['plugin', 'update', 'hui'], null, opts.dryRun);
+      // `claude plugin update` keys on the marketplace@plugin id ("hui@hui"),
+      // NOT the bare name ("hui" → "Plugin not found"). The install path uses
+      // `hui@hui`, so update must too. Probed via `plugin list` JSON: the id
+      // is "hui@hui". Some older CLIs accept the bare name, so fall back to it
+      // only if the qualified id fails — but try the correct form first.
+      const r = runSpawn('claude', ['plugin', 'update', 'hui@hui'], null, opts.dryRun);
       if (spawnOk(r)) {
         results.installed.push('claude');
         note('  plugin updated — restart Claude Code to apply');
       } else {
-        results.failed.push(['claude', 'claude plugin update failed']);
+        // Fallback for CLIs that only accept the bare plugin name.
+        const r2 = runSpawn('claude', ['plugin', 'update', 'hui'], null, opts.dryRun);
+        if (spawnOk(r2)) {
+          results.installed.push('claude');
+          note('  plugin updated — restart Claude Code to apply');
+        } else {
+          results.failed.push(['claude', 'claude plugin update failed']);
+        }
       }
     } else {
       note('  hui plugin not installed — installing fresh');
