@@ -5,7 +5,7 @@ HUI is product name. `next-token-hui` is npm distribution. Repository source is 
 | Layer | Value | Use |
 |---|---|---|
 | Product | **HUI** | Plugins, skills, `/hui`, global `hui` command |
-| npm distribution | `next-token-hui` | `npx -y next-token-hui -- ...` |
+| npm distribution | `next-token-hui` | `npx -y next-token-hui ...` |
 | Repository | `everything-ok/next-token` | GitHub, marketplaces, skills source |
 
 One installer supports listed AI coding agents. Installation and runtime capabilities depend on host integration and detection.
@@ -21,14 +21,14 @@ Two distinct things share the name "hui":
 
 ```bash
 # Run latest public package without global install (no `hui` command registered)
-npx -y next-token-hui -- --help
+npx -y next-token-hui --help
 
 # Install HUI command globally (gives you the `hui` terminal command)
 npm install -g next-token-hui
 hui --help
 
 # Pin one immutable release
-npx -y next-token-hui@<version> -- --dry-run --all
+npx -y next-token-hui@<version> --dry-run --all
 ```
 
 `next-token-hui@<version>` fetches hook assets from matching immutable Git tag `v<version>` and verifies downloaded hook files against committed SHA-256 manifest. `npx -y next-token-hui` follows npm `latest` tag.
@@ -70,14 +70,14 @@ If you want to install for one agent (or want to know exactly what command runs 
 |---|---|:-:|
 | **Claude Code** | `claude plugin marketplace add everything-ok/next-token && claude plugin install hui@hui` | Yes |
 | **Gemini CLI** | `gemini extensions install https://github.com/everything-ok/next-token` | Yes |
-| **opencode** | `node bin/install.js --only opencode` *(or `npx -y next-token-hui -- --only opencode`)* | Yes (plugin + AGENTS.md) |
-| **OpenClaw** | `npx -y next-token-hui -- --only openclaw` | Yes (workspace skill + SOUL.md) |
-| **Hermes Agent** | `npx -y next-token-hui -- --only hermes` *(or `node bin/install.js --only hermes` from a clone)* | Yes (native skills, enabled on load) |
+| **opencode** | `node bin/install.js --only opencode` *(or `npx -y next-token-hui --only opencode`)* | Yes (plugin + AGENTS.md) |
+| **OpenClaw** | `npx -y next-token-hui --only openclaw` | Yes (workspace skill + SOUL.md) |
+| **Hermes Agent** | `npx -y next-token-hui --only hermes` *(or `node bin/install.js --only hermes` from a clone)* | Yes (native skills, enabled on load) |
 | **Codex CLI** | `npx skills add everything-ok/next-token -a codex` | Per-session: `/hui` |
 | **Cursor** | `npx skills add everything-ok/next-token -a cursor` | Per-session by default; `--with-init` for an always-on rule file |
 | **Windsurf** | `npx skills add everything-ok/next-token -a windsurf` | Per-session by default; `--with-init` for an always-on rule file |
 | **Cline** | `npx skills add everything-ok/next-token -a cline` | Per-session by default; `--with-init` for an always-on rule file |
-| **GitHub Copilot** *(soft probe)* | `npx -y next-token-hui -- --only copilot --with-init` | Repo-wide instructions via `--with-init` |
+| **GitHub Copilot** *(soft probe)* | `npx -y next-token-hui --only copilot --with-init` | Repo-wide instructions via `--with-init` |
 | **Continue** | `npx skills add everything-ok/next-token -a continue` | No — say `/hui` |
 | **Kilo Code** | `npx skills add everything-ok/next-token -a kilo` | No |
 | **Roo Code** | `npx skills add everything-ok/next-token -a roo` | No |
@@ -116,7 +116,7 @@ For "auto-activates? No" agents, type `/hui` once per session (or use natural-la
 bash install.sh --list             # macOS / Linux / WSL, from a local clone
 pwsh install.ps1 --list            # Windows / PowerShell, from a local clone
 node bin/install.js --list         # any platform, from a local clone
-npx -y next-token-hui -- --list   # no clone needed
+npx -y next-token-hui --list   # no clone needed
 ```
 
 Each row prints the agent id, profile slug (where applicable), and whether it was auto-detected on your machine. Full agent matrix (with detection rules) is also defined in `bin/install.js` under the `PROVIDERS` array.
@@ -212,7 +212,7 @@ Statusline should show `[HUI]` (orange) at bottom of Claude Code while mode is a
 ## Uninstall
 
 ```bash
-npx -y next-token-hui -- --uninstall
+npx -y next-token-hui --uninstall
 ```
 
 What it removes:

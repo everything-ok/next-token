@@ -53,8 +53,8 @@ node bin/install.js --list
 先预览后写入（npm 包名 `next-token-hui`）：
 
 ```bash
-npx -y next-token-hui -- --dry-run --all
-npx -y next-token-hui -- --all
+npx -y next-token-hui --dry-run --all
+npx -y next-token-hui --all
 ```
 
 一键安装（自动检测已装 agent）：
@@ -109,17 +109,17 @@ node src/tools/hui-init.js . --check-conflicts --json
 ### 卸载
 
 ```bash
-npx -y next-token-hui -- --uninstall          # 预览加 --dry-run
+npx -y next-token-hui --uninstall          # 预览加 --dry-run
 hui --uninstall                                # 全局安装后
 ```
 
 ### 升级
 
 ```bash
-npx -y next-token-hui -- --update              # 一键升级(npx 拉新包 + 跑 update)
+npx -y next-token-hui --update              # 一键升级(npx 拉新包 + 跑 update)
 hui --update                                   # 全局安装后
-npx -y next-token-hui -- --update --only claude  # 只升级 claude
-npx -y next-token-hui -- --update --dry-run      # 预览
+npx -y next-token-hui --update --only claude  # 只升级 claude
+npx -y next-token-hui --update --dry-run      # 预览
 ```
 
 `--update` 升级已装的 HUI:`claude plugin update hui`(拉最新 marketplace;未装过则 fresh install)+ 重新 copy standalone hooks + 重接 settings.json + 重 add skills(Cursor/Windsurf/Codex 等,幂等)+ Gemini 重装。**保留 `.hui-active` 当前模式**。plugin 更新后需 restart Claude Code 生效。
@@ -152,9 +152,9 @@ npx -y next-token-hui -- --update --dry-run      # 预览
 诊断（终端，非会话内）：
 
 ```bash
-npx -y next-token-hui -- --doctor            # 机器可读加 --json
-npx -y next-token-hui -- --migrate-from-hui --force   # 修复旧 standalone 安装
-npx -y next-token-hui -- --version           # 显示包名 + 版本（-V 同）
+npx -y next-token-hui --doctor            # 机器可读加 --json
+npx -y next-token-hui --migrate-from-hui --force   # 修复旧 standalone 安装
+npx -y next-token-hui --version           # 显示包名 + 版本（-V 同）
 ```
 
 ## 4.5 命令验证矩阵（1.2.2 实测）

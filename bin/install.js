@@ -8,7 +8,7 @@
 //
 // Distribution:
 //   Local clone: node bin/install.js [flags]
-//   curl|bash:   delegated from install.sh shim → npx -y next-token-hui -- [flags]
+//   curl|bash:   delegated from install.sh shim → npx -y next-token-hui [flags]
 //   Windows:     pwsh install.ps1 [flags] → same npx delegation
 //
 // Pure stdlib, zero npm runtime deps.
