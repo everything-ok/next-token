@@ -144,9 +144,9 @@ npx -y next-token-hui -- --doctor            # 机器可读加 --json
 npx -y next-token-hui -- --migrate-from-hui --force   # 修复旧 standalone 安装
 ```
 
-## 4.5 命令验证矩阵（1.1.1 实测）
+## 4.5 命令验证矩阵（1.2.0 实测）
 
-> 以下命令均在隔离 `$CLAUDE_CONFIG_DIR`（不影响真实 `~/.claude`）下、`next-token-hui@1.1.1` 全程实测通过。会话 slash 命令通过真实执行 `hui-mode-tracker.js` hook（喂 `{prompt:"/..."}` JSON on stdin）验证，非静态检查。每条记 flag 写入结果与退出码。
+> 以下命令均在隔离 `$CLAUDE_CONFIG_DIR`（不影响真实 `~/.claude`）下、`next-token-hui@1.2.0` 全程实测通过。会话 slash 命令通过真实执行 `hui-mode-tracker.js` hook（喂 `{prompt:"/..."}` JSON on stdin）验证，非静态检查。每条记 flag 写入结果与退出码。1.2.0 新增硬守卫 `hui-guard.js`（Stop hook）与 `hui-tdd` skill，含真实 `claude -p` plugin 路径触发验证。
 
 ### 终端 CLI（全局 `npm install -g next-token-hui` 后）
 
@@ -188,6 +188,31 @@ npx -y next-token-hui -- --migrate-from-hui --force   # 修复旧 standalone 安
 | SessionStart hook `hui-activate.js` | ✅ 输出规则 |
 | statusline（随 mode 变徽章：`[HUI:ULTRA]` 等） | ✅ |
 | 卸载清理 `.hui-active` / `.prev` / `.history` / `.mode-log` / plugin | ✅ 全清 |
+
+### 硬守卫 `hui-guard.js`（1.2.0，Stop hook，确定性）
+
+通过真实执行 `hui-guard.js`（喂 Stop hook stdin JSON + 造假 transcript）验证：
+
+| 场景 | 输入 | 结果 |
+|---|---|---|
+| 谎报测试（无工具调用） | assistant："I ran the tests and they all pass" + transcript 无 `npm test` 等 | ✅ `decision:block` + reason |
+| 真跑了测试 | transcript 含 `Bash: npm test` + "Tests passed" | ✅ 放行（无输出） |
+| 无声称 | "Fixed the typo. Done." | ✅ 放行 |
+| `HUI_GUARD=0` | 杀手开关 | ✅ 放行 |
+| `stop_hook_active=true` | 防循环 | ✅ 放行 |
+| 无 transcript_path | / | ✅ 放行（不崩） |
+| transcript 是 symlink | / | ✅ 拒绝读取 |
+| 非 Stop 事件 | `hook_event_name:"SessionStart"` | ✅ 放行 |
+| **真实 `claude -p` plugin 路径** | 模型谎报测试 | ✅ Stop hook 触发，`Stop hook feedback` 注入会话强制纠正 |
+
+### token 压缩（1.2.0 实测）
+
+同一段啰嗦 AI 回复，HUI 压缩对照：
+
+```
+原文 108 词 → HUI 33 词，节省 69%
+技术细节保留：< / <= / auth.js / validateToken / API URL / Bearer 全在
+```
 
 
 
@@ -253,6 +278,8 @@ npm publish --dry-run --access public # 仅预演包内容与 npm publish 流程
 - [x] MCP discovery response 的受限 prose 处理
 - [x] evidence-first constraints、Claude SessionStart 组合加载、OpenCode/Hermes 分发补齐
 - [x] 普通 PR 的 asset/preflight/full-test 质量门
+- [x] **硬守卫 Stop hook（`hui-guard.js`，1.2.0）**：确定性拦截"谎报测试"——模型声称 ran/passed tests 但本会话无测试命令时 `decision:block` 强制纠正。突破 prompt 级只能建议的天花板，是 HUI 与竞品 superpowers 都未有的新层。8 个回归用例全绿，真实 `claude -p` 会话已验证触发。
+- [x] **`hui-tdd` skill（1.2.0）**：prompt 级 RED-GREEN-REFACTOR，先写失败测试，拒"done"直到测试存在且通过。与硬守卫互补（skill 教先测、guard 拦谎报）。
 
 ### 近期
 
@@ -283,5 +310,7 @@ npm publish --dry-run --access public # 仅预演包内容与 npm publish 流程
 
 ### 发布历史
 
+- `1.2.0`（2026-07-29）：新增**硬守卫 + TDD**。`hui-guard.js` Stop hook 确定性拦截"谎报测试"——扫描最后一条 assistant 消息的强声称信号（I ran the tests / tests pass），反查本会话 transcript 有无 `npm test`/`jest`/`pytest`/`cargo test` 等工具调用，有声称无调用则 `decision:block` 强制 Claude 纠正。`hui-tdd` skill 补 prompt 级 TDD（RED-GREEN-REFACTOR）。安全：`stop_hook_active` 防循环、`HUI_GUARD=0` 杀手开关、5MB/10000 行 transcript 上限、拒 symlink、self-contained（无 `../` require）。8 回归用例 + 165 全套测试绿，真实会话验证 plugin 路径 Stop hook 触发。
+- `1.1.3`（2026-07-28）：`uninstall` 探测 `claude mcp list` 后才 `remove hui-shrink`，消除未注册时的 "No MCP server named hui-shrink" stderr 噪声。
 - `1.1.1`（2026-07-28）：修复 `1.1.0` 端到端验证发现的两个致命 bug——standalone hook 因 `require('../hui-command-parser')` 加载即崩（内联 parser 自洽）；GitHub 仓库 `HUI/next-token` 404 致 plugin 安装与 integrity fetch 失败（统一指向 `everything-ok/next-token`）。同时统一 npm 包名 `next-token-hui`（shim/docs/skills）、`uninstall` 清理运行期状态文件、重算 `checksums.sha256` 与 skill 镜像、补 e2e hook 实跑 + uninstall 状态文件 + parser 同步性回归测试。
 - `1.1.0`（首发）：HUI installer 统一 Node 脚本、canonical skills、hooks/statusline、provider matrix。
