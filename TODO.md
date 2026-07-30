@@ -104,6 +104,7 @@ node src/tools/hui-init.js . --check-conflicts --json
 | `--config-dir <路径>` | 指定配置目录（默认 `~/.claude`） |
 | `--doctor` | 诊断 node/npm/hooks/plugin 状态（只读） |
 | `--migrate-from-hui [--force]` | 修复旧的 standalone 安装 |
+| `--update, -U` | 一键升级已装的 HUI：`claude plugin update` + 重 copy standalone hooks + 重 add skills + Gemini 重装；保留 `.hui-active` 当前模式 |
 
 ### 卸载
 
@@ -111,6 +112,17 @@ node src/tools/hui-init.js . --check-conflicts --json
 npx -y next-token-hui -- --uninstall          # 预览加 --dry-run
 hui --uninstall                                # 全局安装后
 ```
+
+### 升级
+
+```bash
+npx -y next-token-hui -- --update              # 一键升级(npx 拉新包 + 跑 update)
+hui --update                                   # 全局安装后
+npx -y next-token-hui -- --update --only claude  # 只升级 claude
+npx -y next-token-hui -- --update --dry-run      # 预览
+```
+
+`--update` 升级已装的 HUI:`claude plugin update hui`(拉最新 marketplace;未装过则 fresh install)+ 重新 copy standalone hooks + 重接 settings.json + 重 add skills(Cursor/Windsurf/Codex 等,幂等)+ Gemini 重装。**保留 `.hui-active` 当前模式**。plugin 更新后需 restart Claude Code 生效。
 
 卸载会清理：`~/.claude/hooks/` 下的 hui hook 文件、`settings.json` 里的 hui hook/statusline 接线、`claude plugin uninstall hui` 与 `claude mcp remove hui-shrink`，以及运行期状态文件（`.hui-active` / `.hui-active.prev` / `.hui-history.jsonl` / `.hui-mode-log.jsonl`）。`--only` 装的 IDE skill 需在对应 IDE 的 skill 管理器移除；`--with-init` 写的每仓库文件（`.cursor/`、`.windsurf/`、`AGENTS.md` 等）需手动删。
 
@@ -310,6 +322,7 @@ npm publish --dry-run --access public # 仅预演包内容与 npm publish 流程
 
 ### 发布历史
 
+- `1.2.1`（2026-07-29）：新增 `--update` / `-U` flag,一键升级已装的 HUI。`claude plugin update hui`(拉最新 marketplace;未装过则 fresh install)+ 重新 copy standalone hooks + 重接 settings.json(幂等)+ 重 add profile skills(Cursor/Windsurf/Codex 等)+ Gemini 重装。保留 `.hui-active` 当前模式不重置。支持 `--update --dry-run` / `--only <agent>` / `--skip-skills`。`unit.argv.test.mjs` 加解析 + 文档断言(19/19 pass)。重算 `skills-lock.json`(hui canonical hash 漂移修复)。
 - `1.2.0`（2026-07-29）：新增**硬守卫 + TDD**。`hui-guard.js` Stop hook 确定性拦截"谎报测试"——扫描最后一条 assistant 消息的强声称信号（I ran the tests / tests pass），反查本会话 transcript 有无 `npm test`/`jest`/`pytest`/`cargo test` 等工具调用，有声称无调用则 `decision:block` 强制 Claude 纠正。`hui-tdd` skill 补 prompt 级 TDD（RED-GREEN-REFACTOR）。安全：`stop_hook_active` 防循环、`HUI_GUARD=0` 杀手开关、5MB/10000 行 transcript 上限、拒 symlink、self-contained（无 `../` require）。8 回归用例 + 165 全套测试绿，真实会话验证 plugin 路径 Stop hook 触发。
 - `1.1.3`（2026-07-28）：`uninstall` 探测 `claude mcp list` 后才 `remove hui-shrink`，消除未注册时的 "No MCP server named hui-shrink" stderr 噪声。
 - `1.1.1`（2026-07-28）：修复 `1.1.0` 端到端验证发现的两个致命 bug——standalone hook 因 `require('../hui-command-parser')` 加载即崩（内联 parser 自洽）；GitHub 仓库 `HUI/next-token` 404 致 plugin 安装与 integrity fetch 失败（统一指向 `everything-ok/next-token`）。同时统一 npm 包名 `next-token-hui`（shim/docs/skills）、`uninstall` 清理运行期状态文件、重算 `checksums.sha256` 与 skill 镜像、补 e2e hook 实跑 + uninstall 状态文件 + parser 同步性回归测试。
