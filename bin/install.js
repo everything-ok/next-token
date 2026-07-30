@@ -1394,11 +1394,38 @@ function uninstall(ctx) {
 // the plugin path uses `claude plugin update` (pulls latest marketplace ref,
 // not a redundant install over the already-enabled plugin), and hooks/skills
 // are re-applied idempotently. `.hui-active` mode is preserved.
+//
+// Self-update: when invoked via the global `hui` bin (not a local clone),
+// the running installer IS the old version. To actually pull the newest
+// package, we re-invoke `npm install -g <pkg>` first so the rest of
+// updateHui (plugin update, hook re-copy, skill re-add) runs the NEW code.
+// A local-clone run (repoRoot detected) skips the npm step — the clone is
+// already the source of truth and `npm i -g` would be wrong.
 async function updateHui(ctx) {
   const { say, note, warn, ok, opts, repoRoot, results } = ctx;
   say(`🪨 ${PRODUCT_NAME} update`);
   if (opts.dryRun) note('  (dry run — nothing will be written)');
   process.stdout.write('\n');
+
+  // Self-update the global package unless we're running from a local clone
+  // (where the working tree is the source) or a dry-run (no writes).
+  // detectRepoRoot() can't tell a clone from a global install dir — both have
+  // src/hooks + agents + skills — so we check whether bin/install.js lives
+  // inside a node_modules tree, which only the npm-installed copy does.
+  const inNodeModules = /[/\\]node_modules[/\\]/.test(__filename);
+  if (inNodeModules && !opts.dryRun) {
+    say('→ updating hui package (npm)');
+    const r = runSpawn('npm', ['install', '-g', NPM_PACKAGE_NAME], null, false);
+    if (spawnOk(r)) {
+      ok('  hui package updated to latest');
+    } else {
+      warn('  npm install -g failed — continuing with current version');
+      results.failed.push(['npm', 'npm install -g failed']);
+    }
+    process.stdout.write('\n');
+  } else if (inNodeModules && opts.dryRun) {
+    note('  would run: npm install -g ' + NPM_PACKAGE_NAME);
+  }
 
   const want = (id) => opts.only.length === 0 || opts.only.includes(id);
   const explicit = (id) => opts.only.includes(id);

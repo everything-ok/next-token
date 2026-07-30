@@ -69,7 +69,7 @@ All commands verified by strict self-test (isolated sandbox, 1.2.2). Global inst
 | `hui --migrate-from-hui [--force]` | Repair a stale standalone install |
 | `hui --dry-run --all` | Print the install plan, write nothing |
 | `hui --only claude --with-hooks` | Install plugin + standalone hooks (incl. `hui-guard.js`) |
-| `hui --update` / `-U` | One-command upgrade: `claude plugin update` + re-copy hooks + re-add skills; preserves active mode |
+| `hui --update` / `-U` | One-command self-upgrade: `npm install -g` (pull newest package) + `claude plugin update` + re-copy hooks + re-add skills; preserves active mode |
 | `hui --uninstall` / `-u` | Remove hooks/settings/state files/plugin |
 | `hui --bogus` (unknown) | Exit 2 with error |
 

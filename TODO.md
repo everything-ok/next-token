@@ -172,8 +172,8 @@ npx -y next-token-hui --version           # 显示包名 + 版本（-V 同）
 | `hui --migrate-from-hui` | 干净时报 "no migration actions needed" | ✅ |
 | `hui --dry-run --all` | 只打印不写盘 | ✅ |
 | `hui --only claude --with-hooks` | 装 plugin + hooks（含 hui-guard.js） | ✅ |
-| `hui --update` | 已装→`refreshing standalone hooks` + `update done`；保留 `.hui-active` | ✅ |
-| `hui --update --dry-run` | 打印 `HUI update` 计划，不写盘 | ✅ |
+| `hui --update` | 已装→`npm install -g`(拉最新包)+`refreshing standalone hooks` + `update done`；保留 `.hui-active` | ✅ |
+| `hui --update --dry-run` | 打印 `HUI update` + `would run: npm install -g` 计划，不写盘 | ✅ |
 | `hui --uninstall` | hooks/settings/状态文件/plugin 全清 | ✅ |
 | `hui --bogus`（非法） | `error: unknown flag`，exit 2 | ✅ |
 | 重复装（幂等） | SessionStart hook 数 = 1，不重复 | ✅ |
@@ -327,6 +327,7 @@ npm publish --dry-run --access public # 仅预演包内容与 npm publish 流程
 
 ### 发布历史
 
+- `1.2.3`（2026-07-30）：`--update` 自更新——全局 `hui --update` 时先跑 `npm install -g next-token-hui` 拉最新包,再 `claude plugin update` + 重 copy hooks + 重 add skills。用户不再需要手动 `npm install -g next-token-hui@x` 升级。通过 `__filename` 含 `node_modules` 判断是否全局装(本地 clone 不跑 npm,以工作树为准)。`--update --dry-run` 打印 `would run: npm install -g`。去掉文档里 `npx -y next-token-hui --` 的多余 `--`(npm7+ 不需要)。
 - `1.2.2`（2026-07-30）：新增 `--version` / `-V` flag 打印包名+版本（之前 `hui --version` 报 unknown flag）。全 CLI 命令严格自测通过 12 项（--version/--help/--list/--doctor/--migrate/--dry-run/install/--update/uninstall/非法 flag/幂等）。重算 `skills-lock.json`（两份）与 `checksums.sha256` 修复 hash 漂移。
 - `1.2.1`（2026-07-29）：新增 `--update` / `-U` flag,一键升级已装的 HUI。`claude plugin update hui`(拉最新 marketplace;未装过则 fresh install)+ 重新 copy standalone hooks + 重接 settings.json(幂等)+ 重 add profile skills(Cursor/Windsurf/Codex 等)+ Gemini 重装。保留 `.hui-active` 当前模式不重置。支持 `--update --dry-run` / `--only <agent>` / `--skip-skills`。`unit.argv.test.mjs` 加解析 + 文档断言(19/19 pass)。重算 `skills-lock.json`(hui canonical hash 漂移修复)。
 - `1.2.0`（2026-07-29）：新增**硬守卫 + TDD**。`hui-guard.js` Stop hook 确定性拦截"谎报测试"——扫描最后一条 assistant 消息的强声称信号（I ran the tests / tests pass），反查本会话 transcript 有无 `npm test`/`jest`/`pytest`/`cargo test` 等工具调用，有声称无调用则 `decision:block` 强制 Claude 纠正。`hui-tdd` skill 补 prompt 级 TDD（RED-GREEN-REFACTOR）。安全：`stop_hook_active` 防循环、`HUI_GUARD=0` 杀手开关、5MB/10000 行 transcript 上限、拒 symlink、self-contained（无 `../` require）。8 回归用例 + 165 全套测试绿，真实会话验证 plugin 路径 Stop hook 触发。
