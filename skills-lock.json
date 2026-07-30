@@ -43,17 +43,17 @@
       "skillPath": "skills/hui-stats/SKILL.md",
       "computedHash": "8243ff49b0628a92a5ff7e90491b5c80aa0252e584b464863bac7d155d3fd0b0"
     },
-    "huicrew": {
-      "source": "everything-ok/next-token",
-      "sourceType": "github",
-      "skillPath": "skills/huicrew/SKILL.md",
-      "computedHash": "de038609c8f376f1bcba8c5a22696b6e171319b621985a3742d6bb6695e87cb5"
-    },
     "hui-tdd": {
       "source": "everything-ok/next-token",
       "sourceType": "github",
       "skillPath": "skills/hui-tdd/SKILL.md",
       "computedHash": "fa927d19e0ef43bb2cb6b951f58961168a54e597cb2e4d8db7047a2703e53d7e"
+    },
+    "huicrew": {
+      "source": "everything-ok/next-token",
+      "sourceType": "github",
+      "skillPath": "skills/huicrew/SKILL.md",
+      "computedHash": "de038609c8f376f1bcba8c5a22696b6e171319b621985a3742d6bb6695e87cb5"
     }
   }
 }

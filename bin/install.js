@@ -66,7 +66,7 @@ function parseArgs(argv) {
     all: false, minimal: false, listOnly: false, noColor: false,
     only: [], uninstall: false, nonInteractive: false,
     configDir: null, help: false, doctor: false, json: false,
-    migrateFromHui: false,
+    migrateFromHui: false, update: false,
   };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -116,6 +116,7 @@ function parseArgs(argv) {
       case '--uninstall': case '-u': opts.uninstall = true; break;
       case '--doctor': opts.doctor = true; break;
       case '--migrate-from-hui': opts.migrateFromHui = true; break;
+      case '--update': case '-U': opts.update = true; break;
       case '--json': opts.json = true; break;
       case '--non-interactive': opts.nonInteractive = true; break;
       case '-h': case '--help': opts.help = true; break;
@@ -1387,6 +1388,107 @@ function uninstall(ctx) {
   ok('per-repo init files (.cursor/, .windsurf/, AGENTS.md) — remove with your editor');
 }
 
+// ── Update ─────────────────────────────────────────────────────────────────
+// One-command upgrade of an existing install. Different from a bare re-install:
+// the plugin path uses `claude plugin update` (pulls latest marketplace ref,
+// not a redundant install over the already-enabled plugin), and hooks/skills
+// are re-applied idempotently. `.hui-active` mode is preserved.
+async function updateHui(ctx) {
+  const { say, note, warn, ok, opts, repoRoot, results } = ctx;
+  say(`🪨 ${PRODUCT_NAME} update`);
+  if (opts.dryRun) note('  (dry run — nothing will be written)');
+  process.stdout.write('\n');
+
+  const want = (id) => opts.only.length === 0 || opts.only.includes(id);
+  const explicit = (id) => opts.only.includes(id);
+
+  // 1. Claude plugin — `plugin update` (not `install`, which skips if present).
+  //    Only fires when hui is already installed; if absent, fall back to a
+  //    fresh install so `--update` on a never-installed machine still works.
+  if (want('claude') && (explicit('claude') || hasCmd('claude'))) {
+    results.detected++;
+    say('→ Claude Code');
+    const probe = captureSpawn('claude', ['plugin', 'list']);
+    const installed = probe.status === 0 && /hui/i.test(probe.stdout || '');
+    if (installed) {
+      const r = runSpawn('claude', ['plugin', 'update', 'hui'], null, opts.dryRun);
+      if (spawnOk(r)) {
+        results.installed.push('claude');
+        note('  plugin updated — restart Claude Code to apply');
+      } else {
+        results.failed.push(['claude', 'claude plugin update failed']);
+      }
+    } else {
+      note('  hui plugin not installed — installing fresh');
+      const pluginEnv = opts.dryRun ? null : sameFilesystemTmpEnv(ctx.configDir);
+      const r1 = runSpawn('claude', ['plugin', 'marketplace', 'add', REPO], { env: pluginEnv }, opts.dryRun);
+      const r2 = runSpawn('claude', ['plugin', 'install', 'hui@hui'], { env: pluginEnv }, opts.dryRun);
+      if (spawnOk(r1) && spawnOk(r2)) results.installed.push('claude');
+      else results.failed.push(['claude', 'claude plugin install failed']);
+    }
+
+    // Re-copy standalone hooks (idempotent: installHooks re-writes + re-wires).
+    // The plugin manifest owns hooks in the plugin path, but the standalone
+    // fallback under ~/.claude/hooks/ drifts without a re-copy on update.
+    say('  → refreshing standalone hooks');
+    const r = await installHooks(ctx);
+    if (r === 'ok') results.installed.push('claude-hooks');
+    else if (r === 'skip') results.skipped.push(['claude-hooks', 'already wired']);
+    else results.failed.push(['claude-hooks', r]);
+    process.stdout.write('\n');
+  }
+
+  // 2. Profile-based skills (Cursor/Windsurf/Codex/etc.) — `npx skills add`
+  //    is idempotent; re-running updates the skill files in place.
+  if (!opts.skipSkills) {
+    for (const prov of PROVIDERS) {
+      if (prov.id === 'claude' || prov.id === 'gemini' || prov.id === 'opencode' ||
+          prov.id === 'openclaw' || prov.id === 'hermes') continue; // handled above / native
+      if (!want(prov.id)) continue;
+      if (prov.soft && !explicit(prov.id)) continue;
+      // Only update providers that were actually detected OR explicitly requested.
+      if (!explicit(prov.id) && !detectMatch(prov.detect)) continue;
+      if (!prov.profile) continue;
+      installViaSkills(ctx, prov);
+    }
+  }
+
+  // 3. Gemini extension — re-install (idempotent).
+  if (want('gemini') && (explicit('gemini') || hasCmd('gemini'))) {
+    const probe = captureSpawn('gemini', ['extensions', 'list']);
+    if (probe.status === 0 && /hui/i.test(probe.stdout || '')) {
+      say('→ Gemini CLI (update)');
+      results.detected++;
+      const r = runSpawn('gemini', ['extensions', 'install', `https://github.com/${REPO}`], null, opts.dryRun);
+      if (spawnOk(r)) results.installed.push('gemini');
+      else results.failed.push(['gemini', 'gemini extensions install failed']);
+      process.stdout.write('\n');
+    }
+  }
+
+  // Summary
+  process.stdout.write('\n');
+  ctx.say('🪨 update done');
+  if (results.installed.length) {
+    ok('  updated:');
+    for (const a of results.installed) process.stdout.write(`    • ${a}\n`);
+  }
+  if (results.skipped.length) {
+    process.stdout.write('  skipped:\n');
+    for (const [id, why] of results.skipped) process.stdout.write(`    • ${id} — ${why}\n`);
+  }
+  if (results.failed.length) {
+    ctx.warn('  failed:');
+    for (const [id, why] of results.failed) process.stderr.write(`    • ${id} — ${why}\n`);
+  }
+  if (!results.installed.length && !results.skipped.length && !results.failed.length) {
+    note('  nothing to update. run with --only <agent> to scope, or install first.');
+  }
+  process.stdout.write('\n');
+  note(`  current package version: ${PACKAGE_VERSION}`);
+  note(`  uninstall: npx -y ${NPM_PACKAGE_NAME} -- --uninstall`);
+}
+
 // ── Interactive prompt (TTY-only) ─────────────────────────────────────────
 async function promptForOnly(detected) {
   if (!process.stdin.isTTY || !process.stdout.isTTY) return null;
@@ -1643,6 +1745,10 @@ FLAGS
   --migrate-from-hui    Migrate a stale/standalone HUI install onto the current
                         plugin layout. Read-only dry-run unless paired with
                         --force; never overwrites user-authored settings/rules.
+  --update, -U          Update an existing HUI install to the latest version:
+                        claude plugin update + re-copy standalone hooks +
+                        re-add skills. Run from a clone or via npx (which
+                        fetches the new package version). --only <agent> scopes.
   --json                With --doctor or --list, emit machine-readable JSON.
                         --list --json includes provider capability metadata.
   --config-dir <path>   Claude Code config dir for hook files + settings.json.
@@ -1660,6 +1766,7 @@ EXAMPLES
   npx -y ${NPM_PACKAGE_NAME} -- --all               # all the trimmings
   npx -y ${NPM_PACKAGE_NAME} -- --only claude --no-mcp-shrink
   npx -y ${NPM_PACKAGE_NAME} -- --uninstall
+  npx -y ${NPM_PACKAGE_NAME} -- --update               # upgrade an existing install
 
   Issues: https://github.com/${REPO}/issues
 `);
@@ -1691,6 +1798,7 @@ async function main() {
   };
 
   if (opts.uninstall) { uninstall(ctx); return 0; }
+  if (opts.update) { await updateHui(ctx); return 0; }
 
   ctx.say(`🪨 ${PRODUCT_NAME} installer`);
   ctx.note(`  ${REPOSITORY_URL}`);

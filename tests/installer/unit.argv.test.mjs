@@ -175,3 +175,21 @@ test('--help discloses --config-dir scope', () => {
   assert.match(collapsed, /XDG_CONFIG_HOME/);
   assert.match(collapsed, /OPENCLAW_WORKSPACE/);
 });
+
+test('--update / -U flag is parsed and documented', () => {
+  // Help must document the flag.
+  const help = run('--help');
+  assert.equal(help.status, 0);
+  const collapsed = help.stdout.replace(/\s+/g, ' ');
+  assert.match(collapsed, /--update, -U/);
+  assert.match(collapsed, /Update an existing HUI install/);
+  // Dry-run --update must be accepted (argv parses, dispatches to updateHui,
+  // which prints the plan without writing). Use an isolated config dir.
+  const r = run('--update', '--dry-run', '--non-interactive', '--config-dir', '/tmp/__cm_update_test');
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /HUI update/);
+  // -U alias resolves the same way.
+  const alias = run('-U', '--dry-run', '--non-interactive', '--config-dir', '/tmp/__cm_update_alias');
+  assert.equal(alias.status, 0, alias.stderr);
+  assert.match(alias.stdout, /HUI update/);
+});
